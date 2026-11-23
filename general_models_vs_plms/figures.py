@@ -822,7 +822,8 @@ def arms_by_split(summary: Summary, out: Path) -> None:
     save(figure, out, "arms_by_split")
 
 
-FIGURES = {"headline": headline, "tiers": tiers, "tiers_both": tiers_both, "per_split": per_split, "claude_controls": claude_controls, "ridge_controls": ridge_controls,
+FIGURES = {"headline": headline, "tiers": tiers, "tiers_both": tiers_both, "per_split": per_split,
+           "claude_controls": claude_controls, "ridge_controls": ridge_controls,
            "arms_by_split": arms_by_split,
            "plm_models": plm_models, "learning_curve": learning_curve, "claude_models": claude_models, "refusals": refusals,
            "complementarity": complementarity, "within_groups": within_groups, "postcutoff": postcutoff, "effort": effort,

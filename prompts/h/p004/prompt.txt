@@ -1,0 +1,38 @@
+Below are measurements for variants of one protein. A variant is written as its substitutions relative to the parent sequence. For example, A12V means that position 12 holds A in the parent and V in the variant. Several substitutions are separated by spaces, and the word parent means the parent sequence itself.
+
+Parent sequence:
+MRDTDVTVLGLGLMGQALAGAFLKDGHATTVWNRSEGKAGQLAEQGAVLASSARDAAEASPLVVVCVSDHAAVRAVLDPLGDVLAGRVLVNLTSGTSEQARATAEWAAERGITYLDGAIMAIPQVVGTADAFLLYSGPEAAYEAHEPTLRSLGAGTTYLGADHGLSSLYDVALLGIMWGTLNSFLHGAALLGTAKVEATTFAPFANRWIEAVTGFVSAYAGQVDQGAYPALDATIDTHVATVDHLIHESEAAGVNTELPRLVRTLADRALAGGQGGLGYAAMIEQFRSPS
+
+Measured variants, one per line, written as the variant, a tab, and the measured value:
+A198T	-1.33
+G20D L270M	-0.92
+A107T P138Q	-0.58
+A43G	-0.35
+I112V E250Q	0.19
+S60T	-2.91
+S290I	0.37
+V6D R34P	-1.96
+H247Q L270Q	-1.28
+A100S S136T	-1.44
+G179D Q274K	-2.38
+N91Y V239A	-0.22
+F184Y G226E	-1.06
+M14T S290G	-3.04
+L115I S290R	-0.25
+A43E V196M	-2.23
+T113S S249P	-3.24
+A172V	-1.62
+G37S D162V	-0.86
+D170N F201Y	0.26
+A218S	-0.52
+S52R Y135H	-1.74
+E139G E197V	-1.38
+G10C T29M	-3.37
+S136P V254A	-1.02
+T193S A252P	-3.63
+A121V G179D	-1.31
+T4S P138L	-2.27
+T128I Q225R	-1.43
+A141D	-0.38
+
+Which protein do these measurements describe, what was measured, and in which study or dataset were they published? Reply with three lines that start with Protein:, Measurement: and Source:. Where you do not know, write unknown.

@@ -1,0 +1,3 @@
+Protein: Alpha-amylase AmyE from Bacillus subtilis (mature enzyme, starch-degrading glycoside hydrolase family 13)
+Measurement: Enzymatic activity of multi-substitution variants, most likely starch hydrolysis / stain removal activity of the expressed variant (low values mean loss of activity)
+Source: Most likely van der Flier et al. 2024, "Enzyme structure correlates with variant effect predictability" (Comput Struct Biotechnol J), the B. subtilis alpha-amylase multi-mutant dataset of about 3,700 variants; less likely the alpha-amylase set of the Align to Innovate Protein Engineering Tournament

@@ -1,0 +1,3 @@
+Protein: Tryptophan synthase beta subunit (TrpB) from Thermotoga maritima, an engineered stand-alone variant (Tm9D8* lineage)
+Measurement: Fitness of combinatorial active-site variants (three-site saturation libraries at positions such as 104-108, 117-119 and 162/166/301), measured as the growth-rate enrichment of a tryptophan-auxotrophic E. coli strain that depends on TrpB making tryptophan from indole and serine, read out by deep sequencing
+Source: Johnston et al. 2024, "A combinatorially complete epistatic fitness landscape in an enzyme active site" (PNAS; Arnold lab), the TrpB three-site (TrpB3A to TrpB3I) and four-site (TrpB4) landscapes, also distributed in benchmark collections such as ProteinGym

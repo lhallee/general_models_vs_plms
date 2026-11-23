@@ -1,0 +1,3 @@
+Protein: Imine reductase (IRED), an NADPH-dependent oxidoreductase, most likely the Streptosporangium roseum enzyme (SrIRED); identified from the sequence, not certain
+Measurement: Catalytic activity fitness score (log enrichment of variants after sorting for imine reduction activity in a microfluidic droplet screen with sequencing), relative to the parent
+Source: Likely Gantz et al. 2024, "Microdroplet screening rapidly profiles a biocatalyst to enable its AI-assisted engineering" (Hollfelder lab), the IRED deep mutational scanning dataset; not certain

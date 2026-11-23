@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import pytest
 
+from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 from types import SimpleNamespace
 
 from general_models_vs_plms.claude_calls import BudgetExhausted, Prompt, SpendLedger, call_cost, run_prompt, worst_case_cost
@@ -28,7 +30,7 @@ class StandInClient:
         self.messages = SimpleNamespace(stream=self.stream)
 
     @contextmanager
-    def stream(self, **request: object):
+    def stream(self, **request: object) -> Iterator[SimpleNamespace]:
         self.requests.append(request)
         message = SimpleNamespace(
             model=request["model"], stop_reason=self.stop_reason, stop_details=None, usage=StandInUsage(),
@@ -45,7 +47,7 @@ def test_call_cost_prices_fresh_cached_and_generated_tokens() -> None:
     assert worst_case_cost("claude-fable-5-2", Prompt("a", "x" * 1000, "y" * 1000), 100) == pytest.approx((2000 * 10 + 100 * 40) / 1e6)
 
 
-def test_run_prompt_writes_one_record_and_never_resends(tmp_path) -> None:
+def test_run_prompt_writes_one_record_and_never_resends(tmp_path: Path) -> None:
     client = StandInClient()
     ledger = SpendLedger(tmp_path, "claude-fable-5-2__low", budget_usd=1.0)
     prompt = Prompt("task__c0", "prefix", "suffix")
@@ -64,7 +66,7 @@ def test_run_prompt_writes_one_record_and_never_resends(tmp_path) -> None:
     assert ledger.state["pending_usd"] == pytest.approx(0.0)
 
 
-def test_ledgers_in_one_folder_share_the_budget(tmp_path) -> None:
+def test_ledgers_in_one_folder_share_the_budget(tmp_path: Path) -> None:
     client = StandInClient()
     first = SpendLedger(tmp_path, "claude-fable-5-2__low", budget_usd=0.06)
     assert run_prompt(client, "claude-fable-5-2", "low", Prompt("a__c0", "p", "s"), tmp_path, first, 100) == "sent"

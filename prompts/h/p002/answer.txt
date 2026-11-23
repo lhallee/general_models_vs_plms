@@ -1,0 +1,3 @@
+Protein: Human fibroblast growth factor receptor 2 (FGFR2), intracellular tyrosine kinase domain (identified from the sequence)
+Measurement: Probably a deep mutational scanning functional score for single-nucleotide missense variants: log enrichment relative to the parent in a pooled cell growth selection reporting FGFR2 kinase activity or fitness (positive = gain of function, negative = loss). The exact assay and any drug condition (for example an FGFR inhibitor) are unknown.
+Source: Not known with confidence; most likely a deep mutational scan of the FGFR2 kinase domain published around 2024-2025. Exact study or dataset: unknown.

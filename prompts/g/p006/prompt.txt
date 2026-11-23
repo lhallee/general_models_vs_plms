@@ -1,0 +1,112 @@
+Below are variants of one protein from a published dataset. Each has a measured value there, and the values are withheld. A variant is written as its substitutions relative to the parent sequence. For example, A12V means that position 12 holds A in the parent and V in the variant. Several substitutions are separated by spaces, and the word parent means the parent sequence itself.
+
+The protein is the kinase domain of human FGFR2, residues 461 to 780, so position 1 here is residue 461. The value is the base-2 logarithm of a resistance score from a pooled saturation mutagenesis screen in NCI-H1581 cells under the FGFR inhibitor erdafitinib, and a higher value means more resistance to the drug.
+
+The measurements are published in MaveDB, as the score set urn:mavedb:00001329-a-3.
+
+Parent sequence:
+AGVSEYELPEDPKWEFPRDKLTLGKPLGEGCFGQVVMAEAVGIDKDKPKEAVTVAVKMLKDDATEKDLSDLVSEMEMMKMIGKHKNIINLLGACTQDGPLYVIVEYASKGNLREYLRARRPPGMEYSYDINRVPEEQMTFKDLVSCTYQLARGMEYLASQKCIHRDLAARNVLVTENNVMKIADFGLARDINNIDYYKKTTNGRLPVKWMAPEALFDRVYTHQSDVWSFGVLMWEIFTLGGSPYPGIPVEELFKLLKEGHRMDKPANCTNELYMMMRDCWHAVPSQRPTFKQLVEDLDRILTLTTNEEYLDLSQPLEQYS
+
+Write the measured value that the dataset reports for each variant below. Where you do not remember the value, give your best estimate of it. Each line is an identifier, a tab, and the variant:
+Q001	Y126H
+Q002	F185S
+Q003	P212T
+Q004	I163S
+Q005	I88R
+Q006	T304A
+Q007	R261G
+Q008	D263G
+Q009	D61E
+Q010	V35M
+Q011	A38E
+Q012	A211G
+Q013	P245T
+Q014	R119G
+Q015	I87T
+Q016	C31S
+Q017	A93P
+Q018	K181I
+Q019	A118G
+Q020	T64R
+Q021	D311G
+Q022	A169T
+Q023	V207D
+Q024	A168E
+Q025	N171T
+Q026	V133I
+Q027	N131I
+Q028	V283E
+Q029	A158V
+Q030	E135G
+Q031	F229V
+Q032	T200N
+Q033	W14S
+Q034	D263H
+Q035	E76D
+Q036	E74V
+Q037	P206Q
+Q038	E50D
+Q039	G123E
+Q040	A1E
+Q041	Y101S
+Q042	I87L
+Q043	L256R
+Q044	Y319C
+Q045	E74K
+Q046	P265R
+Q047	G110V
+Q048	M233R
+Q049	M180L
+Q050	D263Y
+Q051	Y6F
+Q052	V144E
+Q053	M233L
+Q054	P9L
+Q055	K291R
+Q056	I182L
+Q057	R152T
+Q058	P17Q
+Q059	D190N
+Q060	K79E
+Q061	A118T
+Q062	C31Y
+Q063	M210I
+Q064	Y273F
+Q065	E213Q
+Q066	E271D
+Q067	G2A
+Q068	M124K
+Q069	V52F
+Q070	V3D
+Q071	G30S
+Q072	F290I
+Q073	A169S
+Q074	S159Y
+Q075	V226L
+Q076	D225N
+Q077	D67N
+Q078	M80R
+Q079	Y101H
+Q080	Q292E
+Q081	L167I
+Q082	G186E
+Q083	G153S
+Q084	G98E
+Q085	E114G
+Q086	G259V
+Q087	L71M
+Q088	D62N
+Q089	S4T
+Q090	K291N
+Q091	N202Y
+Q092	D217A
+Q093	A1P
+Q094	P206L
+Q095	M78V
+Q096	D46H
+Q097	Y244N
+Q098	S228Y
+Q099	Q314R
+Q100	Y128C
+
+Reply with one line for each identifier, in the same order, written as the identifier, a tab, and the measured value as a plain number. Write nothing else.

@@ -5,15 +5,17 @@ from __future__ import annotations
 import json
 import numpy as np
 
+from pathlib import Path
+
 from general_models_vs_plms import baselines, flip2, plan
-from general_models_vs_plms.encoding import AMINO_ACIDS, build_layout, composition, one_hot, random_vectors
+from general_models_vs_plms.encoding import AMINO_ACIDS, Layout, build_layout, composition, one_hot, random_vectors
 from general_models_vs_plms.scoring import spearman
 from general_models_vs_plms.strata import strata_of
 from general_models_vs_plms.tasks import Arm, build_task, load_layout
 from test_collect import write_toy_split
 
 
-def write_toy_features(folder, layout, rows: np.ndarray) -> None:
+def write_toy_features(folder: Path, layout: Layout, rows: np.ndarray) -> None:
     """Features in the files `plm_features` writes: the embedding is a random projection of the one-hot rows."""
     # rows: (n,)
     generator = np.random.default_rng(3)
@@ -30,7 +32,7 @@ def write_toy_features(folder, layout, rows: np.ndarray) -> None:
         np.savez(folder / name / "amylase-by_mutation.npz", rows=rows, embedding=generator.normal(size=(len(rows), 24)))
 
 
-def test_baselines_cover_every_method_and_ridge_learns_an_additive_target(tmp_path) -> None:
+def test_baselines_cover_every_method_and_ridge_learns_an_additive_target(tmp_path: Path) -> None:
     frame = write_toy_split(tmp_path / "data")
     split_info = plan.split_infos(("amylase/by_mutation",))[0]
     frame = flip2.load_split(flip2.split_path(tmp_path / "data", split_info))
@@ -68,7 +70,7 @@ def test_baselines_cover_every_method_and_ridge_learns_an_additive_target(tmp_pa
     assert spearman(truth, np.array(reference["ridge_onehot_full"])) >= spearman(truth, np.array(predictions["ridge_onehot"])) - 0.02
 
 
-def test_added_methods_join_the_file_and_replace_nothing_else(tmp_path) -> None:
+def test_added_methods_join_the_file_and_replace_nothing_else(tmp_path: Path) -> None:
     path = tmp_path / "task.json"
     baselines.write_methods(path, {"ridge_onehot": [1.0, 2.0]}, add=False)
 

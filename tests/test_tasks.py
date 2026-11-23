@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from pathlib import Path
+
 from general_models_vs_plms import plan
 from general_models_vs_plms.encoding import substitution_text
 from general_models_vs_plms.flip2 import SplitInfo
@@ -66,7 +68,7 @@ def test_label_transformations_keep_the_shown_values_as_a_set_or_reflect_them() 
         shown_values(targets, 2, "reversed", generator)
 
 
-def test_a_task_is_reproducible_holds_no_query_label_and_shares_queries_across_arms(tmp_path) -> None:
+def test_a_task_is_reproducible_holds_no_query_label_and_shares_queries_across_arms(tmp_path: Path) -> None:
     frame = toy_frame()
     layout = load_layout(INFO, frame)
     plain = build_task(INFO, frame, layout, Arm("k64", 64), 0, "test", 100)

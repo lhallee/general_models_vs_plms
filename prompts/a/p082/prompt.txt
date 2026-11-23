@@ -1,0 +1,234 @@
+Below are measurements for variants of one protein. A variant is written as its substitutions relative to the parent sequence. For example, A12V means that position 12 holds A in the parent and V in the variant. Several substitutions are separated by spaces, and the word parent means the parent sequence itself. The parent has two chains separated by a colon. Positions in the first chain are numbered from 1, positions in the second chain are written p1, p2 and so on, and a hyphen means that the residue is absent.
+
+Parent sequence:
+FMYFKFDISRFPFIACISNAPDRKEHGYMIFFSPERFDFSGYSGKFAYDHSNYADYYHGYWWPCYHSRMWSSDDHYYQHSEIINDYQAYKFMNYIDRMMM:PGWCEHWA
+
+Measured variants, one per line, written as the variant, a tab, and the measured value:
+Hp6G	-0.066
+Ep5L	-0.821
+Gp2E	-0.014
+Ap8S	-1.312
+Ep5N	-1.315
+Hp6T	-0.344
+Hp6K	-0.289
+Wp7L	-0.058
+Pp1K	-0.012
+Ep5D	-0.654
+Wp3N	-0.270
+Gp2Q	-0.027
+Hp6A	-0.270
+Ep5Q	-0.719
+Pp1T	-0.058
+Pp1I	0.029
+Hp6E	0.048
+Cp4I	-0.080
+Gp2P	-0.182
+Wp3C	-0.396
+Cp4M	-0.013
+Cp4S	-0.337
+Ep5A	-0.714
+Cp4V	-0.084
+Ep5T	-0.773
+Pp1W	0.084
+Wp3I	-0.213
+Gp2C	-0.179
+Hp6L	-0.235
+Ep5H	-0.156
+Wp7Y	-0.041
+Wp7D	-0.086
+Pp1V	0.000
+Ap8K	-0.701
+Wp3Q	-0.264
+Wp3T	-0.507
+Ep5F	-0.626
+Ap8W	-0.783
+Gp2A	-0.010
+Gp2T	-0.197
+Hp6I	-0.274
+Ep5R	-0.783
+Ap8Q	-1.248
+Pp1D	0.005
+Cp4E	-0.130
+Gp2L	-0.157
+Wp7R	-0.165
+Ap8H	-0.945
+Pp1L	-0.007
+Cp4Q	-0.022
+Cp4N	-0.075
+Wp3D	-0.305
+Hp6F	-0.393
+Wp3Y	-0.505
+Wp7H	-0.063
+Gp2M	-0.311
+Ap8F	-0.192
+Pp1C	-0.021
+Wp7M	-0.001
+Pp1E	0.022
+Pp1R	-0.037
+Pp1- Gp2- Wp3- Cp4- Ep5- Hp6- Wp7- Ap8-	-0.835
+Ep5V	-0.708
+Ap8E	-0.776
+Gp2K	-0.196
+Wp7G	-0.067
+Ap8N	-0.879
+Wp7S	-0.150
+Pp1Y	-0.007
+Cp4D	-0.157
+Hp6M	0.018
+Ap8D	-0.665
+Gp2V	-0.027
+Gp2I	-0.456
+Pp1F	0.028
+Wp7V	-0.058
+Wp3R	-0.488
+Wp3E	-0.206
+Wp3K	-0.405
+Wp3G	-0.145
+Gp2- Wp3- Cp4- Ep5- Hp6- Ap8-	-0.842
+Gp2R	-0.373
+Pp1- Gp2- Wp3- Cp4- Ep5- Hp6- Ap8-	-0.867
+Gp2D	-0.261
+Hp6C	-0.148
+Ep5Y	-0.887
+Ap8P	-0.852
+Ep5K	-0.787
+Cp4G	-0.147
+Ep5P	-0.923
+Hp6R	-0.603
+Ep5G	-1.222
+Gp2H	-0.052
+Cp4L	-0.089
+Cp4Y	-0.146
+Cp4A	-0.077
+Hp6Q	-0.343
+Hp6V	-0.144
+Gp2W	-0.353
+Wp7E	-0.039
+Gp2S	0.127
+Wp3A	-0.270
+Pp1N	0.020
+Ep5S	-0.824
+Wp7K	-0.101
+Wp3V	-0.327
+Hp6S	-0.059
+Wp3H	-0.303
+Wp7I	-0.063
+Ap8V	-0.094
+Ap8L	-0.518
+Pp1S	-0.003
+Cp4F	-0.071
+Ep5M	-0.811
+Pp1H	0.027
+Wp3P	-0.271
+Cp4W	-0.038
+Wp7C	-0.090
+Hp6D	-0.042
+Wp3F	-0.249
+Ep5W	-0.836
+Wp3M	-0.008
+Hp6Y	-0.215
+Wp7N	-0.042
+
+Predict the measured value of each variant below. Each line is an identifier, a tab, and the variant:
+Q001	F31E Ep5F
+Q002	F39I Ep5L
+Q003	I17Y Hp6T
+Q004	Y48R Hp6W
+Q005	I17T Hp6L
+Q006	Y76K Ep5L
+Q007	S33T Wp3K
+Q008	S33Q Wp3S
+Q009	Q78D Ep5Q
+Q010	E81M Hp6K
+Q011	H75C Gp2M
+Q012	Y76F Pp1E
+Q013	P63R Gp2W
+Q014	K5Y Ap8P
+Q015	Y28H Ep5A
+Q016	F11S Wp3D
+Q017	Q78E Ep5A
+Q018	N93K Ep5N
+Q019	P63T Hp6Q
+Q020	P63L Ap8Q
+Q021	P63D Hp6Q
+Q022	Q78Y Ep5C
+Q023	I83A Ap8K
+Q024	A20S Wp7S
+Q025	Y86L Ap8T
+Q026	K5F Hp6E
+Q027	H75I Gp2W
+Q028	K24P Ep5H
+Q029	F1N Ep5T
+Q030	P63M Hp6T
+Q031	P63A Hp6I
+Q032	D85M Gp2N
+Q033	K45L Hp6T
+Q034	P63Y Hp6A
+Q035	F11H Ep5G
+Q036	H75I Ap8R
+Q037	A20K Cp4M
+Q038	K24S Ap8L
+Q039	K90L Cp4M
+Q040	M2W Ep5N
+Q041	S80Y Wp3T
+Q042	I82A Ep5M
+Q043	P63K Ap8W
+Q044	M99P Ap8G
+Q045	P63Y Hp6L
+Q046	P63S Hp6T
+Q047	P63V Hp6T
+Q048	Q87D Ap8F
+Q049	Y57N Wp3F
+Q050	A20T Ap8H
+Q051	Y3R Cp4N
+Q052	Y3R Cp4Y
+Q053	F39E Ep5S
+Q054	F1S Gp2W
+Q055	P63F Gp2D
+Q056	S33H Cp4R
+Q057	H50K Ap8E
+Q058	Y76G Wp3Y
+Q059	Q78F Ep5T
+Q060	H75C Gp2I
+Q061	K45M Pp1Q
+Q062	P63N Hp6T
+Q063	S33T Gp2N
+Q064	Q78L Ep5I
+Q065	G59M Ep5R
+Q066	N19Q Gp2N
+Q067	Y56L Ep5Q
+Q068	F46Y Ep5N
+Q069	H75I Gp2F
+Q070	Q78A Ep5A
+Q071	K24E Cp4Y
+Q072	Q78I Ep5K
+Q073	H75C Gp2A
+Q074	P63E Gp2W
+Q075	R36F Hp6R
+Q076	F31D Ep5F
+Q077	P63I Hp6T
+Q078	Q78V Ep5V
+Q079	H75S Gp2W
+Q080	P63N Hp6F
+Q081	S51L Wp3L
+Q082	F32R Gp2M
+Q083	Q78F Ep5A
+Q084	E81Q Ap8W
+Q085	Y65G Hp6I
+Q086	H75G Gp2M
+Q087	Y28T Wp3C
+Q088	S33M Wp3T
+Q089	Y57P Gp2D
+Q090	R36Q Ep5V
+Q091	I83H Ap8I
+Q092	F1K Hp6T
+Q093	Y76F Hp6A
+Q094	Q78A Ep5G
+Q095	Q78F Ep5C
+Q096	P63F Gp2W
+Q097	Y65K Ep5V
+Q098	Y65T Hp6I
+Q099	Q78E Ep5C
+Q100	K90D Cp4W
+
+Reply with one line for each identifier, in the same order, written as the identifier, a tab, and your predicted value as a plain number. Write nothing else.

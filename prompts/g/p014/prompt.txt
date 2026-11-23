@@ -1,0 +1,112 @@
+Below are variants of one protein from a published dataset. Each has a measured value there, and the values are withheld. A variant is written as its substitutions relative to the parent sequence. For example, A12V means that position 12 holds A in the parent and V in the variant. Several substitutions are separated by spaces, and the word parent means the parent sequence itself. The parent has two chains separated by a colon. Positions in the first chain are numbered from 1, positions in the second chain are written p1, p2 and so on, and a hyphen means that the residue is absent.
+
+The first chain is the third PDZ domain of PSD-95 (PDZ3) and the second chain is its peptide ligand from CRIPT. The value is a binding measurement for the pair, and a higher value means stronger binding.
+
+The measurements are published in the FLIP2 benchmark, as the split file pdz3/single_to_double.csv.gz.
+
+Parent sequence:
+GEEDIPREPRRIVIHRGSTGLGFNIVGGEDGEGIFISFILAGGPADLSGELRKGDQILSVNGVDLRNASHEQAAIALKNAGQTVTIIAQYKPEEYSRFEA:KNYKQTSV
+
+Write the measured value that the dataset reports for each variant below. Where you do not remember the value, give your best estimate of it. Each line is an identifier, a tab, and the variant:
+Q001	I34T Tp6I
+Q002	I25L Tp6M
+Q003	L40G Sp7W
+Q004	G22D Sp7K
+Q005	L40W Sp7M
+Q006	G27F Tp6M
+Q007	E29W Kp4F
+Q008	E29H Kp4E
+Q009	H70A Tp6H
+Q010	T19R Sp7F
+Q011	S37Y Qp5R
+Q012	G27I Np2T
+Q013	N24D Qp5K
+Q014	F38G Vp8N
+Q015	G28S Tp6V
+Q016	I36E Kp4A
+Q017	H70T Tp6V
+Q018	P9F Tp6P
+Q019	N24W Sp7H
+Q020	N24M Vp8H
+Q021	N24A Sp7H
+Q022	H70G Tp6Y
+Q023	L77V Vp8F
+Q024	V26E Kp1E
+Q025	G17M Vp8W
+Q026	F38I Sp7T
+Q027	S37L Qp5K
+Q028	F35N Tp6S
+Q029	I39P Tp6W
+Q030	N24R Sp7W
+Q031	N24V Sp7L
+Q032	A73R Qp5P
+Q033	F23M Sp7W
+Q034	N24G Sp7V
+Q035	I36S Tp6Q
+Q036	S37L Vp8D
+Q037	V26F Yp3R
+Q038	F35E Vp8M
+Q039	F98M Yp3R
+Q040	R7K Tp6P
+Q041	E3G Kp4W
+Q042	L21V Tp6R
+Q043	N24F Vp8K
+Q044	R10N Vp8Q
+Q045	N24G Sp7M
+Q046	N24E Sp7W
+Q047	N24C Sp7W
+Q048	H15A Vp8I
+Q049	G31P Kp4I
+Q050	V26W Vp8S
+Q051	G54D Yp3P
+Q052	G54D Yp3G
+Q053	I25T Tp6E
+Q054	I39E Qp5K
+Q055	N24I Qp5A
+Q056	E29S Yp3D
+Q057	S18F Vp8T
+Q058	G27Q Kp4G
+Q059	H70I Tp6W
+Q060	S37Y Qp5L
+Q061	F23R Np2H
+Q062	N24P Sp7W
+Q063	E29W Qp5P
+Q064	H70M Tp6L
+Q065	Q89R Tp6D
+Q066	P6H Qp5P
+Q067	G33M Tp6H
+Q068	I14G Tp6P
+Q069	S37L Qp5I
+Q070	H70V Tp6V
+Q071	F35T Yp3G
+Q072	H70L Tp6F
+Q073	S37Y Qp5V
+Q074	N24T Qp5K
+Q075	D30I Sp7D
+Q076	I34A Tp6I
+Q077	N24L Sp7W
+Q078	H70C Tp6C
+Q079	S37E Qp5K
+Q080	N24P Sp7I
+Q081	E71M Kp4M
+Q082	I5D Qp5R
+Q083	H70I Tp6V
+Q084	T19H Vp8K
+Q085	G43Q Sp7L
+Q086	S37Q Qp5R
+Q087	G28W Kp4Y
+Q088	E29R Kp4W
+Q089	G31N Qp5A
+Q090	D30H Tp6C
+Q091	L77S Vp8L
+Q092	I39F Sp7W
+Q093	G27I Sp7V
+Q094	H70V Tp6Q
+Q095	H70I Tp6Y
+Q096	N24I Qp5K
+Q097	G43F Tp6C
+Q098	G43W Sp7L
+Q099	H70T Tp6Y
+Q100	F98A Yp3K
+
+Reply with one line for each identifier, in the same order, written as the identifier, a tab, and the measured value as a plain number. Write nothing else.

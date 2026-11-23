@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from pathlib import Path
+
 from general_models_vs_plms import flip2, plan, report, subagent_arm
 from general_models_vs_plms.report import Series
 from general_models_vs_plms.tasks import Arm, build_task, load_layout, write_task
@@ -233,7 +235,7 @@ def test_effort_table_reads_the_first_prompt_of_each_task() -> None:
     assert one[["prompts", "refused", "answered"]].tolist() == [1, 0, 100] and one["median_thinking_tokens"] == 600
 
 
-def test_validation_table_joins_each_prompt_s_score_with_what_it_cost(tmp_path) -> None:
+def test_validation_table_joins_each_prompt_s_score_with_what_it_cost(tmp_path: Path) -> None:
     pd.DataFrame({"method": ["m@harness-low", "m@harness-high"], "task_id": ["t1", "t1"], "split": "a/one", "arm": "k256_sequence",
                   "queries": 100, "spearman": [0.5, 0.6]}).to_csv(tmp_path / "metrics.csv", index=False)
     pd.DataFrame({"record_id": ["t1__c0", "t1__c0"], "task_id": ["t1", "t1"], "model_requested": "m", "model_served": "m",
@@ -258,7 +260,7 @@ def test_partly_asked_names_a_series_with_fewer_prompts_than_its_tasks_hold() ->
     assert report.partly_asked(calls, metrics) == {("m@harness", "klarge")}
 
 
-def test_audit_reads_a_subagents_model_and_flags_any_tool_beyond_its_own_files(tmp_path) -> None:
+def test_audit_reads_a_subagents_model_and_flags_any_tool_beyond_its_own_files(tmp_path: Path) -> None:
     prompts, transcripts = tmp_path / "w", tmp_path / "transcripts"
     transcripts.mkdir()
     (prompts / "p001").mkdir(parents=True)
@@ -350,7 +352,7 @@ def test_audit_reads_a_subagents_model_and_flags_any_tool_beyond_its_own_files(t
     assert not (tmp_path / "at_work" / "claude-mythos-5-2__harness-high" / "task_p003__c0.json").exists()
 
 
-def test_subagent_prompts_hide_the_task_and_answers_become_records(tmp_path) -> None:
+def test_subagent_prompts_hide_the_task_and_answers_become_records(tmp_path: Path) -> None:
     data_folder, tasks, prompts, responses = (tmp_path / name for name in ("data", "tasks", "prompts", "responses"))
     write_toy_split(data_folder)
     split_info = plan.split_infos(("amylase/by_mutation",))[0]

@@ -1,0 +1,3 @@
+Protein: Third PDZ domain (PDZ3) of human PSD-95 (DLG4) in complex with the C-terminal peptide of CRIPT (KNYKQTSV); the variants are single substitutions in the CRIPT peptide ligand
+Measurement: Binding fitness of the PDZ3-CRIPT interaction from deep mutational scanning, most likely a log-scale enrichment score relative to the parent from a protein fragment complementation assay in yeast (DHFR-based BindingPCA); values below zero mean weaker binding
+Source: Most likely Zarin and Lehner, "A complete map of specificity encoding for a partially fuzzy protein interaction" (bioRxiv 2024, Lehner lab), which mutated the CRIPT ligand against PSD-95 PDZ3; the exact study is not certain

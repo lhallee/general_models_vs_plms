@@ -1,9 +1,11 @@
 # General language models against protein language models
 
 Does a general-purpose language model that reads labeled protein variants in its prompt rank held-out variants better
-than ridge regression on protein language model features? The test was asked for in public
-([post](https://x.com/sacdallago/status/2124189348434444295)) on the [FLIP2](https://flip.protein.properties/)
-benchmark.
+than ridge regression on protein language model features? Diego del Alamo asked for this comparison on the
+[FLIP2](https://flip.protein.properties/) benchmark on 21 November 2026, in a
+[thread](https://x.com/sacdallago/status/2124189348434444295) with Christian Dallago, and raised that FLIP2 might be in
+the models' training data. What others have reported on general language models and protein sequences, with dates
+and authors, is in [SURVEY.md](SURVEY.md).
 
 **It ties, and it does not outperform.** Shown 256 labeled variants, Claude Mythos 5.2 reaches a mean Spearman of 0.380
 over the 16 FLIP2 splits, and the best ridge on ESMC features reaches 0.367 on the same queries. The paired difference
@@ -235,8 +237,13 @@ With up to 2,048 examples Claude Fable 5.2 scores 0.386 and the best ridge on th
 - `general_models_vs_plms/`: the package. `flip2.py` and `postcutoff.py` build the splits, `tasks.py` and `prompts.py`
   the tasks and prompt text, `plm_features.py` and `baselines.py` the baselines, `claude_calls.py` and
   `subagent_arm.py` the two routes, `report.py` the paired bootstrap, and `figures.py` the figures.
+- `scripts/flip2_in_context/`: the scripts of the subagent route, and `run_all.sh`, which scores it and draws
+  every figure.
+- `prompts/`: every prompt Claude Mythos 5.2 was asked, as the file it read, with its answer and the instruction each
+  subagent was given ([prompts/README.md](prompts/README.md)).
 - `tests/`: the test suite.
 - `Dockerfile`, `box.sh`: the image and the entrypoint the baselines and the API calls ran through.
+- `SURVEY.md`: other public results on general language models and protein sequences.
 
 ```bash
 pip install -r requirements.txt
@@ -247,4 +254,31 @@ python -m general_models_vs_plms.figures --summary report/tables --out figures/m
 python -m general_models_vs_plms.figures --summary report/tables --out figures/api --primary claude-fable-5-2@low
 ```
 
-The stages that call the Claude API spend money on every call.
+## Running the experiments
+
+The baselines and the API route run on one GPU machine, in the image, through `box.sh`. State is written under
+`$STATE`.
+
+```bash
+bash box.sh prepare           # build the image, download FLIP2 and the FGFR2 score set, write the tasks
+bash box.sh features          # ESM-2 650M and ESMC-600M features, then the baselines
+bash box.sh more              # ESMC-300M, ESMC-6B, and the embedding controls
+bash box.sh pilot             # API route: three effort levels on validation rows (needs ANTHROPIC_API_KEY)
+bash box.sh main high low     # API route: every arm, the sequence recall probe, and the tables
+```
+
+The stages that call the Claude API spend money on every call, under a budget that `claude_calls.py` enforces.
+
+The subagent route runs wherever the coding agent runs. It needs no API key and no GPU.
+
+```bash
+export PYTHONPATH="$PWD"
+python scripts/flip2_in_context/export_sets.py --state <state> --work <work>   # prompt files under neutral names
+python scripts/flip2_in_context/launch_order.py --work <work> low              # the order, and each instruction
+# Start one fresh subagent per item of <work>/w_private/order.json, with the item's prompt and effort level.
+STATE=<state> WORK=<work> TRANSCRIPTS=<subagent transcripts> bash scripts/flip2_in_context/run_all.sh
+```
+
+`run_all.sh` audits, scores, summarizes, and draws. It audits each subagent's transcript before it scores an answer: the model that answered, its effort level,
+and that it called no tool beyond reading its prompt and writing its answer. It is written for Git Bash on Windows.
+`posthoc.py` holds the analyses added after the results were seen, which are labeled so wherever they are reported.

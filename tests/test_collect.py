@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from pathlib import Path
+
 from general_models_vs_plms import collect, flip2, plan, postcutoff, recognition_probe
 from general_models_vs_plms.tasks import Arm, build_task, load_layout, write_task
 
@@ -15,7 +17,7 @@ from general_models_vs_plms.tasks import Arm, build_task, load_layout, write_tas
 LETTERS = np.array(list("ACDEFGHIKLMNPQRSTVWY"))
 
 
-def write_toy_split(folder, rows: int = 500) -> pd.DataFrame:
+def write_toy_split(folder: Path, rows: int = 500) -> pd.DataFrame:
     generator = np.random.default_rng(2)
     parent = np.array(list("MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQ"))
     weights = generator.normal(size=(len(parent), 20))
@@ -37,7 +39,7 @@ def write_toy_split(folder, rows: int = 500) -> pd.DataFrame:
     return frame
 
 
-def test_collect_scores_replies_and_baselines_and_fills_unanswered_queries(tmp_path, monkeypatch) -> None:
+def test_collect_scores_replies_and_baselines_and_fills_unanswered_queries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     data_folder, tasks, responses, baselines, out = (tmp_path / name for name in ("data", "tasks", "responses", "baselines", "out"))
     write_toy_split(data_folder)
     split_info = plan.split_infos(("amylase/by_mutation",))[0]
@@ -84,7 +86,7 @@ def test_collect_scores_replies_and_baselines_and_fills_unanswered_queries(tmp_p
     assert len(calls) == 2 and calls["thinking_tokens"].tolist() == [3, 3] and calls["answered"].sum() == 119
 
 
-def test_collect_leaves_out_a_task_cut_short_and_keeps_the_subagent_arm_that_asks_one_prompt(tmp_path, monkeypatch) -> None:
+def test_collect_leaves_out_a_task_cut_short_and_keeps_the_subagent_arm_that_asks_one_prompt(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     data_folder, tasks, responses, out = (tmp_path / name for name in ("data", "tasks", "responses", "out"))
     write_toy_split(data_folder)
     split_info = plan.split_infos(("amylase/by_mutation",))[0]
@@ -113,7 +115,7 @@ def test_collect_leaves_out_a_task_cut_short_and_keeps_the_subagent_arm_that_ask
     assert len(pd.read_csv(out / "calls.csv")) == 2
 
 
-def test_recognition_question_shows_unnamed_rows_once_per_dataset(tmp_path) -> None:
+def test_recognition_question_shows_unnamed_rows_once_per_dataset(tmp_path: Path) -> None:
     data_folder, tasks, out = (tmp_path / name for name in ("data", "tasks", "out"))
     write_toy_split(data_folder)
     split_info = plan.split_infos(("amylase/by_mutation",))[0]
