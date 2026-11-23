@@ -1,26 +1,18 @@
 # What others have reported
 
-Public results on general-purpose language models and protein sequences, with the results of this repository in the
-[README](README.md). Sources were opened on 23 November 2026. Numbers are the authors' own and were not rerun here.
-The **Read** column says how much of each source was read: a row marked "abstract" or "post" rests on less than one
-marked "full text". Dates are the day a source was first posted, and later versions are noted. Corrections are welcome
-as issues.
+Public results on general-purpose language models and protein sequences, each set beside the protein-specific
+comparison its authors made, with a summary of what they show together in the [README](README.md#what-the-field-has-found).
+Sources were opened on 23 November 2026, and the numbers are the authors' own and were not rerun here. The **Read**
+column says how much of each source was read, so a row marked "abstract" rests on less than one marked "full text".
+Dates are the day a source was first posted, with later versions noted, and corrections are welcome as issues.
 
 ## Claude Fable 5.2, Claude Mythos 5.2, and Claude Opus 5.5
 
 | Source | Who and when | What was tested | What they report | Read |
 |---|---|---|---|---|
-| [Claude was trained on protein sequences at scale](https://xinmingtu.cn/blog/2026/claude-opus-5-5-protein-sequences/), with [code](https://github.com/XinmingTu/LLM-bioseq-probe) (MIT) | Xinming Tu and Leo Tianlai Chen. Announced on X by Xinming Tu on [17 November 2026](https://x.com/TuXinming/status/2122737418864664618). The post was last updated 20 November 2026 | Next-residue prediction on 668 bacterial and archaeal proteins from 167 Pfam families of unknown function, against shuffled copies of the same sequences, for 20 language models and several protein language models | Real against shuffled accuracy: Claude Fable 5.2 54% against 9%, a gap of 45.1 points (95% interval 42.5 to 47.6). Claude Opus 5.5 34.9% against 7.5%, a gap of 27.4. ProGen3-3B 32.5, ProtGPT3-10B 27.7. GPT, Gemini, and seven open-weight models near zero. On 56 proteins first public after the cutoff: Fable 5.2 +22.1, Opus 5.5 +13.4. The post gives ESM-2 a gap of 34.6 with context on both sides of the cut, and the repository lists ESM C 600M at +13.0 and ESM-2 650M at +7.0 | Full post and README |
-| [CheckLLMfold](https://github.com/jkosinski/CheckLLMfold) (MIT) | Jan Kosinski, announced on X on [18 November 2026](https://x.com/jankosinski/status/2122997527192416440). The README credits Claude Opus 5.5 for the code and text, Sergey Ovchinnikov for the contact-map prompt and folding code, and Xinming Tu and Leo Chen for the next-residue probe | Contact maps and 3D models from Claude Fable 5.2 for ubiquitin, three well-studied proteins, and three bacterial proteins with no relative in the PDB | Long-range contact precision of 0.18 to 0.49 on the well-studied proteins and 0.04 to 0.33 on the proteins with no PDB relative, two of those three near chance. The README says it is AI-written and not thoroughly revised | Full README and post |
-| Posts on X | Sergey Ovchinnikov, 19 and 20 November 2026 | Recall of protein sequences and of alignments by successive Claude models | No sign of training on protein sequence databases before the 5.2 generation. Sequences that keep a coevolution signal only from Fable 5.2. No recall of paired alignments | Posts, read on X. The links were not recorded, so check the originals before citing |
+| [Claude was trained on protein sequences at scale](https://xinmingtu.cn/blog/2026/claude-opus-5-5-protein-sequences/), with [code](https://github.com/XinmingTu/LLM-bioseq-probe) (MIT) | Xinming Tu and Leo Tianlai Chen. Announced on 17 November 2026 and last updated on 20 November 2026 | Next-residue prediction on 668 bacterial and archaeal proteins from 167 Pfam families of unknown function, against shuffled copies of the same sequences, for 20 language models and several protein language models | Real against shuffled accuracy: Claude Fable 5.2 54% against 9%, a gap of 45.1 points (95% interval 42.5 to 47.6). Claude Opus 5.5 34.9% against 7.5%, a gap of 27.4. ProGen3-3B 32.5, ProtGPT3-10B 27.7. GPT, Gemini, and seven open-weight models near zero. On 56 proteins first public after the cutoff: Fable 5.2 +22.1, Opus 5.5 +13.4. The post gives ESM-2 a gap of 34.6 with context on both sides of the cut, and the repository lists ESM C 600M at +13.0 and ESM-2 650M at +7.0 | Full post and README |
+| [CheckLLMfold](https://github.com/jkosinski/CheckLLMfold) (MIT) | Jan Kosinski, announced on 18 November 2026. The README credits Claude Opus 5.5 for the code and text, Sergey Ovchinnikov for the contact-map prompt and folding code, and Xinming Tu and Leo Chen for the next-residue probe | Contact maps and 3D models from Claude Fable 5.2 for ubiquitin, three well-studied proteins, and three bacterial proteins with no relative in the PDB | Long-range contact precision of 0.18 to 0.49 on the well-studied proteins and 0.04 to 0.33 on the proteins with no PDB relative, two of those three near chance. The README says it is AI-written and not thoroughly revised | Full README |
 | [Introducing Claude Fable 5.2 and Claude Mythos 5.2](https://www.anthropic.com/claude-fable-and-mythos-5-2) | Anthropic, 9 November 2026, with an edit note of 11 November | Whole-capsid structure modeling with open folding models, and a 24-hour de novo binder design benchmark | Claude Mythos 5.2 modeled 28 of 34 capsids within 3 Å. Binder design: 85.1 for Mythos 5.2, 79.1 for Mythos 5.1, and 82.6 in a cell labeled "without safeguards". The page makes no claim about sequence recall or variant effects | Full page |
-| [Test finds that Claude Fable 5.2 knows rare protein sequences](https://aimatterin.substack.com/p/test-finds-that-claude-fable-52-knows) | Vallabh Joshi, AI Matter, 18 November 2026 | A report of the Tu and Chen test | Repeats 54% against 9% | Partial, behind a paywall |
-| [Claude models trained on protein sequences at scale, tests show](https://news.lavx.hu/article/claude-models-trained-on-protein-sequences-at-scale-tests-show) | Elena Varga, LavX News, 18 November 2026 | A report of the Tu and Chen test | Repeats the gaps above | Full article |
-| [Hacker News discussion](https://news.ycombinator.com/item?id=50541619) | Submitted by gmays, November 2026 | Discussion of the Tu and Chen post | Commenters question the shuffled control and whether the result is memory or learned structure. No replication | Full thread |
-
-The comparison in this repository was asked for by Diego del Alamo on X on 21 November 2026, who also raised that
-FLIP2 might be in the training data, in a
-[thread](https://x.com/sacdallago/status/2124189348434444295) with Christian Dallago.
 
 ## No examples: variant ranking and protein knowledge
 
@@ -52,6 +44,9 @@ ridge on protein language model features fit on the same examples. That is the c
 
 ## Data and methods this repository uses
 
+- **The comparison.** Diego del Alamo proposed testing in-context learning against ridge regression on protein
+  language models on FLIP2 on 21 November 2026, in a [public thread](https://x.com/sacdallago/status/2124189348434444295)
+  with Christian Dallago, where the chance that FLIP2 is in the models' training data was also raised.
 - **FLIP2.** Kieran Didi, Sarah Alamdari, Alex X. Lu, Bruce Wittmann, Kadina E. Johnston, Ava P. Amini, Ali Madani,
   Maya Czeneszew, Christian Dallago, and Kevin K. Yang. bioRxiv, 24 February 2026,
   [10.64898/2026.02.23.707496](https://doi.org/10.64898/2026.02.23.707496). The data have been on Zenodo since 30

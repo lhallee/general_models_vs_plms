@@ -1,20 +1,24 @@
 # General language models against protein language models
 
-Does a general-purpose language model that reads labeled protein variants in its prompt rank held-out variants better
-than ridge regression on protein language model features? Diego del Alamo asked for this comparison on the
-[FLIP2](https://flip.protein.properties/) benchmark on 21 November 2026, in a
-[thread](https://x.com/sacdallago/status/2124189348434444295) with Christian Dallago, and raised that FLIP2 might be in
-the models' training data. What others have reported on general language models and protein sequences, with dates
-and authors, is in [SURVEY.md](SURVEY.md).
+General-purpose language models can now read and write protein sequences, which raises the question of whether they
+can stand in for the protein language models that the field uses to predict what a mutation does. This repository
+holds an experiment that tests one sharp form of that question on the [FLIP2](https://flip.protein.properties/)
+benchmark, a second experiment that asks whether memory of the sequences explains the answer, and a dated survey of
+what others have reported. A general model that reads 256 labeled variants in its prompt matches the standard recipe
+of ridge regression on protein language model features and does not beat it, and the best predictor measured here
+averages the two.
 
-**Explainer.** [docs/index.html](docs/index.html) walks through every experiment step by step: a primer that explains
-each piece in plain words, then one card per experiment with its question, data, steps, result, and limits. It is one
-self-contained file with its figures inside, so it opens in any browser from a download or a clone.
+The [explainer](docs/index.html) walks through every experiment step by step for a reader outside the field, with a
+primer on each piece and one card per experiment, and it is a single HTML file with its figures inside that opens in
+any browser once the repository is downloaded or cloned. Every table and figure is in [RESULTS.md](RESULTS.md), the
+other public results are in [SURVEY.md](SURVEY.md), and the commands are in [REPRODUCE.md](REPRODUCE.md).
 
-**It ties, and it does not outperform.** Shown 256 labeled variants, Claude Mythos 5.2 reaches a mean Spearman of 0.380
-over the 16 FLIP2 splits, and the best ridge on ESMC features reaches 0.367 on the same queries. The paired difference
-is +0.013 with a 95% interval of -0.038 to +0.065. The tie holds on an FGFR2 screen published after the model's
-training data end (0.561 against 0.572). Every control without a trained protein model scores 0.14 or less on FLIP2.
+## What we found
+
+Claude Mythos 5.2 was shown 256 labeled variants of a protein as plain text, with the protein unnamed, and was asked
+to rank 100 held-out variants. Ridge regression was fit on the same 256 rows with features from ESM-2 650M and from
+ESMC at three sizes, and every method was scored on the same queries. Each number below is a mean Spearman correlation
+with the measured values, and each interval is a 95% interval from 2,000 paired bootstrap draws of the queries.
 
 ![Controls, ESMC, and Claude Mythos 5.2 on FLIP2 and on FGFR2](report/figures/mythos/tiers_both.png)
 
@@ -23,325 +27,147 @@ FGFR2 splits, published after the model's training data end. Gray rows are contr
 sizes, and orange is Claude Mythos 5.2, whose interval is the shaded band. Triangles use no examples, and circles and
 squares are ridges fit on the same 256 rows the model reads.*
 
-| 256 examples unless said, first 100 queries of each split | FLIP2, 16 splits | FGFR2, 2 splits |
+| 256 examples unless said, first 100 queries of each split | FLIP2, 16 splits | FGFR2 after the cutoff, 2 splits |
 |---|---|---|
-| **Controls** | | |
-| Ridge on a random vector | 0.001 (-0.048 to 0.051) | 0.025 (-0.114 to 0.164) |
-| Ridge on ESMC-600M, residues shuffled | 0.002 (-0.045 to 0.051) | -0.043 (-0.185 to 0.099) |
-| Ridge on ESMC-600M, positions scrambled | 0.113 (0.064 to 0.159) | 0.045 (-0.103 to 0.192) |
-| Value of the nearest example | 0.138 (0.092 to 0.183) | 0.221 (0.131 to 0.298) |
-| Ridge on untrained ESMC-300M | 0.141 (0.091 to 0.188) | 0.026 (-0.110 to 0.167) |
-| Ridge on amino acid composition | 0.141 (0.091 to 0.186) | 0.027 (-0.106 to 0.164) |
-| Ridge on one-hot sequence | 0.142 (0.097 to 0.182) | 0.295 (0.175 to 0.410) |
-| **ESMC, no examples** | | |
-| ESMC-300M score | 0.281 (0.233 to 0.325) | 0.464 (0.330 to 0.577) |
-| ESMC-600M score | 0.341 (0.294 to 0.383) | 0.452 (0.328 to 0.564) |
-| ESMC-6B score | 0.346 (0.298 to 0.388) | 0.481 (0.355 to 0.601) |
-| **ESMC + ridge** | | |
-| Ridge on ESMC-300M embedding | 0.288 (0.238 to 0.332) | 0.344 (0.213 to 0.471) |
-| Ridge on one-hot + ESMC-300M score | 0.314 (0.264 to 0.354) | 0.555 (0.450 to 0.644) |
-| Ridge on ESMC-6B embedding | 0.352 (0.304 to 0.389) | 0.359 (0.222 to 0.481) |
-| Ridge on one-hot + ESMC-600M score | 0.364 (0.315 to 0.402) | 0.549 (0.450 to 0.637) |
-| Ridge on one-hot + ESMC-6B score | 0.365 (0.315 to 0.404) | 0.572 (0.469 to 0.663) |
-| Ridge on ESMC-600M embedding | 0.367 (0.319 to 0.409) | 0.397 (0.255 to 0.514) |
-| **General language model** | | |
-| Claude Mythos 5.2, 256 examples in its prompt | 0.380 (0.333 to 0.421) | 0.561 (0.458 to 0.646) |
+| Best control without a trained protein model (ridge on one-hot sequence) | 0.142 (0.097 to 0.182) | 0.295 (0.175 to 0.410) |
+| Best ESMC score with no examples (ESMC-6B) | 0.346 (0.298 to 0.388) | 0.481 (0.355 to 0.601) |
+| Best ridge on ESMC features | 0.367 (0.319 to 0.409) | 0.572 (0.469 to 0.663) |
+| Claude Mythos 5.2 reading the 256 rows in its prompt | 0.380 (0.333 to 0.421) | 0.561 (0.458 to 0.646) |
+| Average of the model's ranking and a ridge's | 0.443 (0.399 to 0.482) | 0.611 (0.516 to 0.692) |
 
-ESM-2 650M on the same queries: 0.335 with no examples, 0.292 as a ridge on its embedding, and 0.312 as a ridge on
-one-hot features with its score on FLIP2, and 0.454, 0.377, and 0.559 on FGFR2.
+The best ridge is the one on the ESMC-600M embedding for FLIP2 and the one on one-hot features with the ESMC-6B score
+for FGFR2, and the average in the last row pairs the model with that same ridge.
 
-The rule was fixed before any model was asked: in-context learning outperforms if its paired difference from the best
-ridge has a 95% interval above zero. The best ridge is chosen on the queries it is scored on, which favors the ridge.
+### In-context learning ties the best ridge on ESMC features
 
-## Two experiments, kept apart
+Over the 16 FLIP2 splits the model reaches 0.380 and the best ridge reaches 0.367, so the paired difference is +0.013
+with an interval of -0.038 to +0.065 that includes zero. The rule was fixed before any model was asked, and it counts
+in-context learning as better only if that interval lies above zero. The ridge is a strong opponent, because it is the
+best of several and is chosen on the queries it is scored on, while no control without a trained protein model scores
+above 0.14.
 
-| | Claude Mythos 5.2 | Claude models on the public API |
-|---|---|---|
-| How it was asked | One fresh subagent of a coding agent per prompt | One Messages API request per prompt |
-| Models | Claude Mythos 5.2 | Claude Fable 5.2, Opus 5.5, Opus 5, Haiku 5.5 |
-| Queries scored | The first 100 of each split | All 300 of each split |
-| Thinking at the level named low | A median of 2,156 tokens a prompt | None |
+The tie is an average of large wins and large losses, since the model is ahead on 3 splits, behind on 3, and undecided
+on 10. It falls furthest behind where every test value lies above the range of its examples, and it leads most on the
+absorption maxima of rhodopsins, which it predicts at 0.658 with no examples at all. With that dataset left out, a
+check added after the results were seen, the model scores 0.36 and the ridge 0.38.
 
-The two routes differ in the queries, in what surrounds the prompt, and in how much the model thinks, so a gap between
-them is not a gap between models. No figure and no table here puts one beside the other. Each is compared only with
-baselines scored on its own queries.
+### The tie holds on data published after the model's training
 
-## Claude Mythos 5.2
+FLIP2 was public before the model's training data end, so a good score there could come from memory of the benchmark.
+The same comparison was therefore repeated on an FGFR2 drug resistance screen that MaveDB published on 20 November
+2026, after that date, where the model scores 0.561 and the best ridge 0.572.
 
-### The tie is an average of large wins and large losses
+### The model learns from its examples and also uses what it knows about the protein
 
-![Claude Mythos 5.2 and the best ridge on each split](report/figures/mythos/per_split.png)
+Three changes to the prompt, tried on one split per dataset where the plain prompt scores 0.496, separate what the
+model takes from the rows from what it brings with it. Reversing the measured values reverses its ranking, to -0.235,
+which shows that the ranking follows the rows. Renaming the residues with a cipher, so that the protein cannot be
+recognized, lowers the score to 0.278, a little above a ridge on one-hot features at 0.209, so about half of the score
+depends on knowing the protein. With no examples at all the model scores 0.391, where the best score a protein
+language model gives without examples, from ESMC-6B, is 0.318.
 
-*Each split, first 100 queries: Claude Mythos 5.2 and the best ridge. A thick line marks a difference whose 95% interval
-excludes zero.*
+### It recognizes the benchmark and does not recite its values
 
-Against the ridge on the ESMC-600M embedding the model is ahead on 3 of 16 splits (`rhomax/by_wild_type` +0.53,
-`amylase/close_to_far` +0.45, `amylase/one_to_many` +0.24), behind on 3 (`hydro/low_to_high` -0.56,
-`trpb/by_position` -0.21, `hydro/three_to_many` -0.17), and undecided on 10. On `hydro/low_to_high` every test value
-lies above the training range, and the model's Spearman is negative.
+Shown a parent sequence and 30 unlabeled rows, the model named the protein, the measurement, and the source study of
+all seven FLIP2 datasets, and for FGFR2 it named the kinase domain and gave no source. Recognition is not recall of
+the measurements, however, because when it was asked to write the published values of the four datasets with
+continuous values it matched 0 of 400 exactly.
 
-### It learns from the rows, and it also knows the protein
+### It can write many of these proteins out, and that does not explain its accuracy
 
-Each control changes one thing about the prompt. They ran on one split per dataset, the probe splits.
+A second experiment hid 15%, 50%, and 85% of the residues of 48 rhodopsins and asked each model to restore them.
+Claude Mythos 5.2 restored 91%, 76%, and 57%, while ESMC-6B restored 59%, 54%, and 13% from the same masks and no
+model rose above the 11% of a guess on shuffled copies. The model also returned the FGFR2 kinase domain whole with half of
+it hidden, so the FGFR2 screen is new to it and the protein is not.
 
-![Claude Mythos 5.2 under each version of its prompt](report/figures/mythos/claude_controls.png)
+How much of a rhodopsin the model can restore does not predict its error on that rhodopsin's absorption maximum, with
+a Spearman of -0.15 (-0.41 to +0.13) across the 48. For the protein language models the matching measure is the
+pseudo-log-likelihood of a sequence, and it tracks the error of the ridge on the embedding for ESMC-600M alone among
+the four models (-0.50, -0.64 to -0.33), so it is no general guide to where such a ridge fails.
 
-*Mean Spearman over the 7 FLIP2 probe splits, first 100 queries. The filled dot is the plain prompt and each hollow dot
-one changed version.*
+### Averaging the two rankings beats both
 
-| 7 FLIP2 probe splits | Mean Spearman | Reading |
-|---|---|---|
-| 256 examples | 0.496 (0.433 to 0.555) | Ridge on the ESMC-600M embedding scores 0.423 |
-| 256 examples, residues enciphered | 0.278 (0.203 to 0.346) | The protein cannot be recognized. Still +0.070 over one-hot ridge (0.209) |
-| 256 examples, values reversed | -0.235 (-0.298 to -0.166) | The ranking follows the rows, not what the model believed |
-| No examples, protein named | 0.391 (0.320 to 0.452) | The zero-shot score of ESMC-6B is 0.318 |
-| 256 examples, high effort | 0.523 (0.461 to 0.576) | +0.027 (-0.012 to +0.068) over low effort |
+The model and the ridge err on different variants, which makes the plain average of their rankings, with equal weights
+and no tuning, the best predictor measured here at 0.443 on FLIP2 and 0.611 on FGFR2.
 
-Reversed values reverse the ranking on six of eight datasets, the post-cutoff one among them. About half of the score
-needs the protein to be recognizable, and with no examples the model is level with a protein language model's
-zero-shot score.
+### Through the public API, Claude Fable 5.2 also ties its best ridge
 
-| Split | No examples | 256 examples | Enciphered | Reversed | Ridge, ESMC-600M embedding | Ridge, one-hot |
-|---|---|---|---|---|---|---|
-| `amylase/by_mutation` | 0.347 | 0.661 | 0.539 | -0.589 | 0.556 | 0.500 |
-| `hydro/three_to_many` | 0.125 | 0.420 | 0.232 | -0.404 | 0.588 | -0.020 |
-| `ired/two_to_many` | 0.294 | 0.254 | 0.178 | 0.050 | 0.268 | -0.045 |
-| `nucb/two_to_many` | 0.422 | 0.335 | 0.113 | -0.298 | 0.463 | 0.011 |
-| `pdz3/single_to_double` | 0.613 | 0.617 | 0.523 | -0.543 | 0.525 | 0.522 |
-| `rhomax/by_wild_type` | 0.658 | 0.737 | -0.020 | 0.583 | 0.212 | 0.085 |
-| `trpb/two_to_many` | 0.281 | 0.448 | 0.382 | -0.444 | 0.353 | 0.407 |
-| `fgfr2/random` (after the cutoff) | 0.378 | 0.662 | 0.342 | -0.493 | 0.494 | 0.462 |
+A separate experiment asked four Claude models through the public API and scored all 300 queries of each split, so its
+numbers are compared only with baselines scored on those queries and are never set beside the ones above. Claude Fable
+5.2 scores 0.365 where the best ridge scores 0.355, a difference of +0.009 (-0.015 to +0.036). Claude Opus 5 (0.264),
+Claude Opus 5.5 (0.252), and Claude Haiku 5.5 (0.176) are below that ridge, and Claude Opus 5.5 refused 68 of its 265
+prompts at low effort.
 
-![Each probe split under four versions of the prompt](report/figures/mythos/arms_by_split.png)
+## What the field has found
 
-*Each probe split under four versions of the prompt, beside the ridge on the ESMC-600M embedding.*
+Across the public results available on 23 November 2026, general language models have reached protein language models
+that read a single sequence on ranking variants and have not passed them, while specialist predictors stay ahead. The
+table sets each result for a general model beside its protein-specific comparison, and [SURVEY.md](SURVEY.md) lists
+every source with its authors, its date, and how much of it was read, since several rows rest on an abstract alone.
 
-Rhomax is the exception. The model scores 0.658 there with no examples, 0.583 against reversed rows, and -0.020 under
-the cipher, so its largest lead over the ridge comes from prior knowledge of rhodopsins and is not in-context learning.
-With Rhomax left out, a check added after the results were seen, the model scores 0.36 and the ridge 0.38 on the 15
-other splits, a difference of -0.02 (-0.07 to +0.03).
-
-### Memory of the benchmark
-
-FLIP2's splits were public before the model's training data end, so three probes ask how much is recited.
-
-![Exact matches against a random deal](report/figures/mythos/exact_matches.png)
-
-*Answers equal to the published value, against the count a random deal of the same answers gives.*
-
-- **Published values.** Asked for the published values with no examples, the model wrote 0 of 400 exactly on the four
-  probe splits with continuous values, where a random deal of its own answers gives 0.06.
-- **Rhomax.** Its values are whole nanometers, and 7 to 14 of 100 answers are exact depending on the prompt, against
-  about 1 from a random deal. This does not separate recall of the table from accurate knowledge of each rhodopsin.
-- **Recognition.** From the parent sequence and 30 unlabeled rows the model named the protein, the measurement, and
-  the source study of all seven FLIP2 datasets. For FGFR2 it named the kinase domain and gave no source.
-- **Data after the cutoff.** The FGFR2 screen (MaveDB `urn:mavedb:00001329-a-3`) was published after the model's
-  training data end, and the tie holds there.
-
-### Knowing a sequence is not predicting its property
-
-Does the model score well on the proteins it knows best? Pseudo-log-likelihood (PPLL) measures how well a masked
-language model knows a sequence: the mean log-probability it gives each residue when that one position is masked.
-Claude Mythos 5.2 returns no probabilities, so it was asked to fill in sequences with 15%, 50%, and 85% of the residues
-hidden, and the share it gets right stands in for PPLL. The sequences are the 6 dataset parents, 48 Rhomax queries,
-and 12 shuffled copies, and the protein language models read the same masks.
-
-![Recovery of masked residues, and knowledge against error](report/figures/mythos/sequence_knowledge.png)
-
-*A, B. Masked residues filled in correctly on natural and on shuffled sequences. C. One dot per rhodopsin: the share
-Claude Mythos 5.2 fills in against the error of the absorption maximum it predicts with no examples. D. Spearman
-across rhodopsins between knowledge of a sequence and absolute error on it, with 95% intervals.*
-
-| Share of masked residues right | 15% masked | 50% masked | 85% masked |
+| Question | General language models | Protein-specific models | Source |
 |---|---|---|---|
-| Claude Mythos 5.2, 48 rhodopsins | 0.914 | 0.758 | 0.568 |
-| Claude Mythos 5.2, 6 parents | 0.880 | 0.562 | 0.095 |
-| ESMC-6B, 48 rhodopsins | 0.594 | 0.540 | 0.125 |
-| ESMC-600M, 48 rhodopsins | 0.412 | 0.341 | 0.127 |
-| Most common visible residue, 48 rhodopsins | 0.110 | 0.112 | 0.102 |
-| Claude Mythos 5.2, 12 shuffled copies | 0.107 | 0.101 | 0.096 |
+| Do they hold natural protein sequences? | Claude Fable 5.2 predicts the next residue of proteins from families of unknown function at 54% against 9% on shuffled copies, a gap of 45 points. GPT, Gemini, and seven open-weight models are near zero | Autoregressive protein language models show smaller gaps on the same probe, 32.5 points for ProGen3-3B and 27.7 for ProtGPT3-10B | Tu and Chen, November 2026 |
+| | Claude Mythos 5.2 restores 76% of a rhodopsin with half of its residues hidden | ESMC-6B restores 54% from the same masks | This repository |
+| Do they know structure? | Contact maps from Claude Fable 5.2 reach a long-range precision of 0.18 to 0.49 on well-studied proteins and 0.04 to 0.33 on proteins with no relative in the PDB | No comparison in the source | Kosinski, November 2026 |
+| Can they rank variants with no examples? | Claude Opus 5 at Spearman 0.406 and GPT 5.6 Sol at 0.402 on 276 tasks | ESM2-650M at 0.411, and the specialist VenusREM at 0.523 | Arora and colleagues, July 2026 |
+| | DeepSeek-Reasoner alone at 0.159 on ProteinGym, and 0.551 as part of an agent system with tools | ESM2-650M at 0.414 and VenusREM at 0.518 | Tan and colleagues, January 2026 |
+| | Claude Mythos 5.2 at 0.391 on 7 FLIP2 splits | ESMC-6B at 0.318 | This repository |
+| Can they learn from labeled examples in the prompt? | Competitive with XGBoost on four peptide classification tasks and not significantly above it | No protein language model baseline in the abstract | Zhao and colleagues, November 2026 |
+| | Claude Mythos 5.2 at 0.380 on FLIP2 with 256 examples | Ridge on the ESMC-600M embedding at 0.367 | This repository |
+| Can they answer questions about proteins? | GPT-5 at 60.65% mean accuracy on twelve tasks | The best protein-specific chat model at 31.83% | Rong and colleagues, December 2025 |
 
-- **It recites.** A sequence comes back nearly whole or at the rate of a guess. The model returned 34, 32, and 23 of
-  the 48 rhodopsins at least 90% right at the three levels, and 19 at all three. It wrote out FGFR2 and TrpB with half
-  the residues hidden, and amylase and PDZ3 with 15% hidden. No protein language model reached 90% on any rhodopsin.
-  The FGFR2 screen is new to the model, and the FGFR2 sequence is not.
-- **Reciting does not predict accuracy.** Across the 48 rhodopsins, the share the model fills in has a Spearman of
-  -0.15 (-0.41 to +0.13) with its absolute error on the absorption maximum with no examples, and -0.04 (-0.33 to
-  +0.24) with 256 examples. In a check added after the results were seen, the 8 rhodopsins it wrote out at no level
-  have a median error of 3.5 nm and the 19 it wrote out at every level 4.0 nm.
-- **PPLL is not a general guide for the protein language models either.** Across 100 rhodopsins, PPLL against the
-  error of the ridge on the same model's embedding gives -0.50 (-0.64 to -0.33) for ESMC-600M, -0.20 (-0.35 to -0.02)
-  for ESM-2 650M, -0.08 (-0.30 to +0.15) for ESMC-300M, and +0.03 (-0.18 to +0.25) for ESMC-6B. The three ESMC models
-  rank the rhodopsins by PPLL nearly alike (Spearman 0.82 to 0.95), so the relation belongs to one model's ridge.
+Across these sources and the results here, memory of natural sequences is real in the newest Claude models and is
+absent from the other general models that were probed, yet in our test it does not predict how well a property is
+predicted. On ranking variants, a general model sits level with a single-sequence protein language
+model whether it is given no examples or 256 of them, and below the specialist predictors. The gains reported so far
+come from combination, either as a general model that is given the outputs of specialist tools or as its ranking
+averaged with a ridge on protein language model features.
 
-Rhomax is the one dataset here in which each query is its own natural sequence, so it is the only place the question
-can be asked per sequence. Forty-eight sequences detect a correlation of about 0.4 or more, each prompt was asked
-once, and the rhodopsins include variants of shared wild types. This test does not separate knowledge of the family
-from memory of measured values. The tables are in `report/tables/sequence_knowledge/`.
+Among the sources surveyed, none gives a general model labeled protein variants in its prompt and compares it with a
+ridge on protein language model features fit on the same examples, which is the comparison made here.
 
-### Use both
+## How the comparison was made
 
-![The best ridge, the model, and the average of their rankings](report/figures/mythos/complementarity.png)
-
-The average of the model's ranking and the best ridge's scores 0.443 (0.399 to 0.482) on FLIP2, +0.063 over the model
-and +0.077 over the ridge, with both intervals above zero. On FGFR2 it reaches 0.611. The average uses equal weights
-and no tuning.
-
-### Effort
-
-![Effort levels on validation and test prompts](report/figures/mythos/effort.png)
-
-Low effort was chosen on validation rows (0.580 at low, 0.575 at medium, 0.581 at high). On test rows high effort minus
-low is +0.027 (-0.012 to +0.068), and the gain is on two datasets.
-
-## The baselines alone
-
-On all 300 queries of each split, with no language model in the figure.
-
-![Each protein language model used three ways](report/figures/baselines/plm_models.png)
-
-*Each protein language model as a score with no examples, as a ridge on its embedding, and as a ridge on one-hot
-features with its score, on the 16 FLIP2 splits.*
-
-![Ridge on control features and on trained embeddings](report/figures/baselines/ridge_controls.png)
-
-*The same ridge on features that hold less and less. A random vector scores zero, an embedding of shuffled residues 0.03,
-and an untrained ESMC-300M what one-hot features do (0.145 against 0.149).*
-
-## Claude models through the public API
-
-A separate experiment on all 300 queries of each split, 256 examples, 16 FLIP2 splits.
-
-![Each Claude model through the API](report/figures/api/claude_models.png)
-
-*Each API model with the prompt as written (filled) and with the residues enciphered (hollow), beside two ridges.*
-
-| 16 FLIP2 splits, all queries | Mean Spearman |
+| Piece | What it is |
 |---|---|
-| Best ridge on these queries (one-hot + ESMC-600M score) | 0.355 (0.328 to 0.380) |
-| Claude Fable 5.2, low effort | 0.365 (0.339 to 0.388) |
-| Claude Fable 5.2, high effort | 0.348 (0.324 to 0.370) |
-| Claude Opus 5 | 0.264 |
-| Claude Opus 5.5, low effort | 0.252 |
-| Claude Opus 5.5, high effort | 0.219 |
-| Claude Haiku 5.5 | 0.176 |
+| Data | The 16 splits of the 7 FLIP2 datasets, and 2 splits of an FGFR2 drug resistance screen from MaveDB that was published after the models' training data end |
+| Task | 256 labeled rows drawn from a split's training part and up to 300 test queries, 100 to a prompt, as plain text with one variant and its value per line and the protein unnamed |
+| Baselines | Ridge regression on one-hot features, on the mean-pooled embedding of ESM-2 650M, ESMC-300M, ESMC-600M, and ESMC-6B, and on one-hot features with a model's zero-shot score, all fit on the same 256 rows, and the zero-shot scores alone |
+| Controls for the ridge | A random vector, amino acid composition, an untrained ESMC-300M, and trained ESMC given shuffled residues or scrambled positions |
+| Controls for the language model | Enciphered residues, reversed values, shuffled values, no examples, and the protein named |
+| Score | Spearman on each split, averaged over splits, with every comparison made on the same queries for both sides |
 
-Claude Fable 5.2 ties the best ridge, +0.009 (-0.015 to +0.036) at low effort, and the three other models are below
-it with intervals that exclude zero. Claude Opus 5.5 refused 68 of 265 prompts at low effort and 21 of 53 at high.
-
-![Claude Fable 5.2 under each version of its prompt](report/figures/api/api_controls.png)
-
-| Claude Fable 5.2, low effort, 16 FLIP2 splits | Mean Spearman |
-|---|---|
-| 256 examples | 0.365 |
-| Protein named | 0.359 |
-| Residues enciphered | 0.288 |
-| No examples, protein named | 0.222 |
-| Shown values shuffled | 0.141 |
-| Shown values reversed | -0.253 |
-
-![Score against the number of examples](report/figures/api/learning_curve.png)
-
-With up to 2,048 examples Claude Fable 5.2 scores 0.386 and the best ridge on the same rows 0.409, a difference of
--0.024 (-0.049 to +0.003). Asked to continue each benchmark protein's sequence, the models get this share of the next
-30 residues right on the real sequence and on a shuffled one: Claude Fable 5.2 92% and 7%, Claude Opus 5.5 76% and
-8%, Claude Opus 5 70% and 8%, and Claude Haiku 5.5 40% and 7%.
-
-![Refusals by model](report/figures/api/refusals.png)
-
-## Method
-
-- **Data.** The 16 splits of the 7 FLIP2 datasets, and 2 splits of an FGFR2 drug-resistance screen from MaveDB that
-  was published after the models' training data end.
-- **Task.** 256 labeled rows drawn from a split's training part, and up to 300 test queries, 100 to a prompt. The
-  prompt is plain text: one variant and its value per line, then the queries. The protein is not named.
-- **Baselines.** Ridge regression on one-hot features, on the mean-pooled embedding of ESM-2 650M, ESMC-300M,
-  ESMC-600M, and ESMC-6B, and on one-hot features with a model's zero-shot score. Zero-shot scores alone. All ridges
-  are fit on the same 256 rows the language model reads.
-- **Controls.** For the ridge: a random vector, amino acid composition, an untrained ESMC-300M, and trained ESMC
-  given shuffled residues or scrambled positions. For the language model: enciphered residues, reversed values,
-  shuffled values, no examples, and the protein named.
-- **Score.** Spearman on each split, averaged over splits, with 95% intervals from 2,000 paired bootstrap draws of
-  the queries. Every comparison uses the same queries for both sides.
+Claude Mythos 5.2 was asked through fresh subagents of a coding agent, one per prompt, at the effort level chosen on
+validation rows, and each subagent's transcript was checked for the model that answered and for any tool use beyond
+reading its prompt and writing its answer.
 
 ## Limits
 
-- Each Claude Mythos 5.2 score rests on one prompt of 100 queries per split, one draw of the 256 rows, and one answer
-  per prompt. The intervals cover the draw of queries and not the spread between two answers to one prompt.
-- The subagent route puts a coding agent's instructions in front of every prompt.
-- The prompt controls for Claude Mythos 5.2 ran on one split per dataset.
-- The first 100 FGFR2 queries are easier than the rest for every method (the best ridge scores 0.45 on all 300), so
-  0.56 is a score on those queries and not the level of the dataset.
-- Dataset recognition was marked by one reader.
+Each Claude Mythos 5.2 score rests on one prompt of 100 queries per split, one draw of the 256 rows, and one answer per
+prompt, so the intervals cover the draw of queries and not the spread between two answers to one prompt. The subagent
+route also puts a coding agent's instructions in front of every prompt, and the prompt controls ran on one split per
+dataset. The first 100 FGFR2 queries are easier than the rest for every method, with the best ridge at 0.45 on all 300,
+which makes 0.56 a score on those queries and not the level of the dataset. The test of sequence memory covers one
+dataset, and its 48 sequences detect only a correlation of about 0.4 or more.
 
 ## Repository
 
-- `report/figures/`: every figure, in `mythos/`, `baselines/`, and `api/`.
-- `report/tables/`: the summary tables the figures are drawn from. `means.csv` holds each method's mean and interval
-  by group of splits, arm, and query scope, `per_split.csv` each split, and `paired.csv` the paired differences.
-  `sequence_knowledge/` holds the tables of the sequence-knowledge experiment.
-- `general_models_vs_plms/`: the package. `flip2.py` and `postcutoff.py` build the splits, `tasks.py` and `prompts.py`
-  the tasks and prompt text, `plm_features.py` and `baselines.py` the baselines, `claude_calls.py` and
-  `subagent_arm.py` the two routes, `report.py` the paired bootstrap, and `figures.py` the figures.
-  `sequence_knowledge.py` and `knowledge_report.py` are the sequence-knowledge experiment.
-- `scripts/flip2_in_context/`: the scripts of the subagent route, and `run_all.sh`, which scores it and draws
-  every figure.
-- `prompts/`: every prompt Claude Mythos 5.2 was asked, as the file it read, with its answer and the instruction each
-  subagent was given ([prompts/README.md](prompts/README.md)).
-- `tests/`: the test suite.
-- `Dockerfile`, `box.sh`: the image and the entrypoint the baselines and the API calls ran through.
-- `docs/index.html`: the explainer, one self-contained page.
-- `SURVEY.md`: other public results on general language models and protein sequences.
+| Path | What it holds |
+|---|---|
+| [docs/index.html](docs/index.html) | The explainer, one self-contained page |
+| [RESULTS.md](RESULTS.md) | Every table and figure |
+| [SURVEY.md](SURVEY.md) | Other public results on general language models and protein sequences, with dates and authors |
+| [REPRODUCE.md](REPRODUCE.md) | The commands for the tables, the figures, and the experiments |
+| `report/figures/`, `report/tables/` | The figures, and the summary tables they are drawn from |
+| [prompts/](prompts/README.md) | Every prompt Claude Mythos 5.2 was asked, as the file it read, with its answer |
+| `general_models_vs_plms/`, `scripts/`, `tests/` | The package, the scripts of the subagent route, and the test suite |
+| `Dockerfile`, `box.sh` | The image and the entrypoint the protein language models ran through |
 
-```bash
-pip install -r requirements.txt
-python -m pytest tests -q
-# Summaries from a run's scored tables, then the three figure sets.
-python -m general_models_vs_plms.report --tables <tables> --out <summary>
-python -m general_models_vs_plms.figures --summary report/tables --out figures/mythos --primary claude-mythos-5-2@harness-low
-python -m general_models_vs_plms.figures --summary report/tables --out figures/api --primary claude-fable-5-2@low
-```
+## Sources
 
-## Running the experiments
-
-The baselines and the API route run on one GPU machine, in the image, through `box.sh`. State is written under
-`$STATE`.
-
-```bash
-bash box.sh prepare           # build the image, download FLIP2 and the FGFR2 score set, write the tasks
-bash box.sh features          # ESM-2 650M and ESMC-600M features, then the baselines
-bash box.sh more              # ESMC-300M, ESMC-6B, and the embedding controls
-bash box.sh pilot             # API route: three effort levels on validation rows (needs ANTHROPIC_API_KEY)
-bash box.sh main high low     # API route: every arm, the sequence recall probe, and the tables
-```
-
-The stages that call the Claude API spend money on every call, under a budget that `claude_calls.py` enforces.
-
-The subagent route runs wherever the coding agent runs. It needs no API key and no GPU.
-
-```bash
-export PYTHONPATH="$PWD"
-python scripts/flip2_in_context/export_sets.py --state <state> --work <work>   # prompt files under neutral names
-python scripts/flip2_in_context/launch_order.py --work <work> low              # the order, and each instruction
-# Start one fresh subagent per item of <work>/w_private/order.json, with the item's prompt and effort level.
-STATE=<state> WORK=<work> TRANSCRIPTS=<subagent transcripts> bash scripts/flip2_in_context/run_all.sh
-```
-
-`run_all.sh` audits, scores, summarizes, and draws. It audits each subagent's transcript before it scores an answer: the model that answered, its effort level,
-and that it called no tool beyond reading its prompt and writing its answer. It is written for Git Bash on Windows.
-`posthoc.py` holds the analyses added after the results were seen, which are labeled so wherever they are reported.
-
-The sequence-knowledge experiment has one stage on the GPU machine and six prompts on the subagent route.
-
-```bash
-bash box.sh knowledge prompts/k/sequences.json    # masked recovery and PPLL for the four protein language models
-python -m general_models_vs_plms.sequence_knowledge prompts --set prompts/k/sequences.json --out <work>
-# Start one fresh subagent per prompt folder of <work>, at low effort, with the instruction in prompts/README.md.
-python -m general_models_vs_plms.sequence_knowledge score --set prompts/k/sequences.json --prompts <work> --out answers.csv
-T=report/tables/sequence_knowledge
-python -m general_models_vs_plms.knowledge_report --set prompts/k/sequences.json --answers $T/answers.csv --masked $T \
-    --predictions $T/rhomax_predictions.csv --summary report/tables --out <out>
-```
-
-`rhomax_predictions.csv` holds the Rhomax rows of the in-context experiment's scored predictions that the report
-reads. `sequence_knowledge select` draws the set from the splits and those predictions.
+FLIP2 is the benchmark of Didi, Alamdari, Lu, Wittmann, Johnston, Amini, Madani, Czeneszew, Dallago, and Yang
+([bioRxiv, February 2026](https://doi.org/10.64898/2026.02.23.707496)), and the FGFR2 screen is MaveDB score set
+`urn:mavedb:00001329-a-3` by Annika Maria Metzner with Sven Diederichs. The ridge on one-hot features with a zero-shot
+score follows Hsu, Nisonoff, Fannjiang, and Listgarten (Nature Biotechnology, 2022). Diego del Alamo proposed the
+comparison of in-context learning with ridge regression on FLIP2. Full references are in [SURVEY.md](SURVEY.md).
