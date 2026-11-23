@@ -1,0 +1,136 @@
+{
+ "groups": {
+  "flip2": [
+   "amylase/by_mutation",
+   "amylase/close_to_far",
+   "amylase/far_to_close",
+   "amylase/one_to_many",
+   "hydro/low_to_high",
+   "hydro/three_to_many",
+   "hydro/to_P01053",
+   "hydro/to_P06241",
+   "hydro/to_P0A9X9",
+   "ired/two_to_many",
+   "nucb/two_to_many",
+   "pdz3/single_to_double",
+   "rhomax/by_wild_type",
+   "trpb/by_position",
+   "trpb/one_to_many",
+   "trpb/two_to_many"
+  ],
+  "postcutoff": [
+   "fgfr2/by_position",
+   "fgfr2/random"
+  ],
+  "curve": [
+   "amylase/by_mutation",
+   "amylase/close_to_far",
+   "ired/two_to_many",
+   "trpb/two_to_many",
+   "hydro/low_to_high",
+   "hydro/to_P06241"
+  ],
+  "probe": [
+   "amylase/by_mutation",
+   "hydro/three_to_many",
+   "ired/two_to_many",
+   "nucb/two_to_many",
+   "pdz3/single_to_double",
+   "rhomax/by_wild_type",
+   "trpb/two_to_many"
+  ]
+ },
+ "match_groups": {
+  "flip2": [
+   "amylase/by_mutation",
+   "amylase/close_to_far",
+   "amylase/far_to_close",
+   "amylase/one_to_many",
+   "hydro/low_to_high",
+   "hydro/three_to_many",
+   "hydro/to_P01053",
+   "hydro/to_P06241",
+   "hydro/to_P0A9X9",
+   "ired/two_to_many",
+   "nucb/two_to_many",
+   "pdz3/single_to_double",
+   "rhomax/by_wild_type",
+   "trpb/by_position",
+   "trpb/one_to_many",
+   "trpb/two_to_many"
+  ],
+  "postcutoff": [
+   "fgfr2/by_position",
+   "fgfr2/random"
+  ],
+  "probe": [
+   "amylase/by_mutation",
+   "hydro/three_to_many",
+   "ired/two_to_many",
+   "nucb/two_to_many",
+   "pdz3/single_to_double",
+   "rhomax/by_wild_type",
+   "trpb/two_to_many"
+  ],
+  "flip2_continuous": [
+   "amylase/close_to_far",
+   "amylase/one_to_many",
+   "hydro/low_to_high",
+   "hydro/three_to_many",
+   "hydro/to_P01053",
+   "hydro/to_P06241",
+   "hydro/to_P0A9X9",
+   "ired/two_to_many",
+   "pdz3/single_to_double",
+   "trpb/by_position",
+   "trpb/one_to_many",
+   "trpb/two_to_many"
+  ],
+  "flip2_discrete": [
+   "amylase/by_mutation",
+   "amylase/far_to_close",
+   "nucb/two_to_many",
+   "rhomax/by_wild_type"
+  ],
+  "probe_continuous": [
+   "hydro/three_to_many",
+   "ired/two_to_many",
+   "pdz3/single_to_double",
+   "trpb/two_to_many"
+  ],
+  "probe_discrete": [
+   "amylase/by_mutation",
+   "nucb/two_to_many",
+   "rhomax/by_wild_type"
+  ]
+ },
+ "language_models": [
+  "claude-fable-5-2@high",
+  "claude-fable-5-2@low",
+  "claude-haiku-5-5@low",
+  "claude-mythos-5-2@harness-high",
+  "claude-mythos-5-2@harness-low",
+  "claude-opus-5-5@high",
+  "claude-opus-5-5@low",
+  "claude-opus-5@low"
+ ],
+ "best_ridge_at_k256": {
+  "flip2": "ridge_onehot_plus_esmc_600m",
+  "postcutoff": "ridge_onehot_plus_esm2_650m"
+ },
+ "best_ridge_first": {
+  "flip2": "ridge_esmc_600m",
+  "postcutoff": "ridge_onehot_plus_esmc_6b"
+ },
+ "draws": 2000,
+ "partly_asked": [
+  "claude-mythos-5-2@harness-high k256",
+  "claude-mythos-5-2@harness-low k0_described",
+  "claude-mythos-5-2@harness-low k0_recall",
+  "claude-mythos-5-2@harness-low k256",
+  "claude-mythos-5-2@harness-low k256_cipher",
+  "claude-mythos-5-2@harness-low k256_flipped"
+ ],
+ "partly_asked_queries": 100,
+ "min_answered": 30
+}
