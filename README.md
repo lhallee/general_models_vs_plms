@@ -236,6 +236,7 @@ With up to 2,048 examples Claude Fable 5.2 scores 0.386 and the best ridge on th
   the tasks and prompt text, `plm_features.py` and `baselines.py` the baselines, `claude_calls.py` and
   `subagent_arm.py` the two routes, `report.py` the paired bootstrap, and `figures.py` the figures.
 - `tests/`: the test suite.
+- `Dockerfile`, `box.sh`: the image and the entrypoint the baselines and the API calls ran through.
 
 ```bash
 pip install -r requirements.txt
