@@ -134,6 +134,47 @@ FLIP2's splits were public before the model's training data end, so three probes
 - **Data after the cutoff.** The FGFR2 screen (MaveDB `urn:mavedb:00001329-a-3`) was published after the model's
   training data end, and the tie holds there.
 
+### Knowing a sequence is not predicting its property
+
+Does the model score well on the proteins it knows best? Pseudo-log-likelihood (PPLL) measures how well a masked
+language model knows a sequence: the mean log-probability it gives each residue when that one position is masked.
+Claude Mythos 5.2 returns no probabilities, so it was asked to fill in sequences with 15%, 50%, and 85% of the residues
+hidden, and the share it gets right stands in for PPLL. The sequences are the 6 dataset parents, 48 Rhomax queries,
+and 12 shuffled copies, and the protein language models read the same masks.
+
+![Recovery of masked residues, and knowledge against error](report/figures/mythos/sequence_knowledge.png)
+
+*A, B. Masked residues filled in correctly on natural and on shuffled sequences. C. One dot per rhodopsin: the share
+Claude Mythos 5.2 fills in against the error of the absorption maximum it predicts with no examples. D. Spearman
+across rhodopsins between knowledge of a sequence and absolute error on it, with 95% intervals.*
+
+| Share of masked residues right | 15% masked | 50% masked | 85% masked |
+|---|---|---|---|
+| Claude Mythos 5.2, 48 rhodopsins | 0.914 | 0.758 | 0.568 |
+| Claude Mythos 5.2, 6 parents | 0.880 | 0.562 | 0.095 |
+| ESMC-6B, 48 rhodopsins | 0.594 | 0.540 | 0.125 |
+| ESMC-600M, 48 rhodopsins | 0.412 | 0.341 | 0.127 |
+| Most common visible residue, 48 rhodopsins | 0.110 | 0.112 | 0.102 |
+| Claude Mythos 5.2, 12 shuffled copies | 0.107 | 0.101 | 0.096 |
+
+- **It recites.** A sequence comes back nearly whole or at the rate of a guess. The model returned 34, 32, and 23 of
+  the 48 rhodopsins at least 90% right at the three levels, and 19 at all three. It wrote out FGFR2 and TrpB with half
+  the residues hidden, and amylase and PDZ3 with 15% hidden. No protein language model reached 90% on any rhodopsin.
+  The FGFR2 screen is new to the model, and the FGFR2 sequence is not.
+- **Reciting does not predict accuracy.** Across the 48 rhodopsins, the share the model fills in has a Spearman of
+  -0.15 (-0.41 to +0.13) with its absolute error on the absorption maximum with no examples, and -0.04 (-0.33 to
+  +0.24) with 256 examples. In a check added after the results were seen, the 8 rhodopsins it wrote out at no level
+  have a median error of 3.5 nm and the 19 it wrote out at every level 4.0 nm.
+- **PPLL is not a general guide for the protein language models either.** Across 100 rhodopsins, PPLL against the
+  error of the ridge on the same model's embedding gives -0.50 (-0.64 to -0.33) for ESMC-600M, -0.20 (-0.35 to -0.02)
+  for ESM-2 650M, -0.08 (-0.30 to +0.15) for ESMC-300M, and +0.03 (-0.18 to +0.25) for ESMC-6B. The three ESMC models
+  rank the rhodopsins by PPLL nearly alike (Spearman 0.82 to 0.95), so the relation belongs to one model's ridge.
+
+Rhomax is the one dataset here in which each query is its own natural sequence, so it is the only place the question
+can be asked per sequence. Forty-eight sequences detect a correlation of about 0.4 or more, each prompt was asked
+once, and the rhodopsins include variants of shared wild types. This test does not separate knowledge of the family
+from memory of measured values. The tables are in `report/tables/sequence_knowledge/`.
+
 ### Use both
 
 ![The best ridge, the model, and the average of their rankings](report/figures/mythos/complementarity.png)
@@ -234,9 +275,11 @@ With up to 2,048 examples Claude Fable 5.2 scores 0.386 and the best ridge on th
 - `report/figures/`: every figure, in `mythos/`, `baselines/`, and `api/`.
 - `report/tables/`: the summary tables the figures are drawn from. `means.csv` holds each method's mean and interval
   by group of splits, arm, and query scope, `per_split.csv` each split, and `paired.csv` the paired differences.
+  `sequence_knowledge/` holds the tables of the sequence-knowledge experiment.
 - `general_models_vs_plms/`: the package. `flip2.py` and `postcutoff.py` build the splits, `tasks.py` and `prompts.py`
   the tasks and prompt text, `plm_features.py` and `baselines.py` the baselines, `claude_calls.py` and
   `subagent_arm.py` the two routes, `report.py` the paired bootstrap, and `figures.py` the figures.
+  `sequence_knowledge.py` and `knowledge_report.py` are the sequence-knowledge experiment.
 - `scripts/flip2_in_context/`: the scripts of the subagent route, and `run_all.sh`, which scores it and draws
   every figure.
 - `prompts/`: every prompt Claude Mythos 5.2 was asked, as the file it read, with its answer and the instruction each
@@ -282,3 +325,18 @@ STATE=<state> WORK=<work> TRANSCRIPTS=<subagent transcripts> bash scripts/flip2_
 `run_all.sh` audits, scores, summarizes, and draws. It audits each subagent's transcript before it scores an answer: the model that answered, its effort level,
 and that it called no tool beyond reading its prompt and writing its answer. It is written for Git Bash on Windows.
 `posthoc.py` holds the analyses added after the results were seen, which are labeled so wherever they are reported.
+
+The sequence-knowledge experiment has one stage on the GPU machine and six prompts on the subagent route.
+
+```bash
+bash box.sh knowledge prompts/k/sequences.json    # masked recovery and PPLL for the four protein language models
+python -m general_models_vs_plms.sequence_knowledge prompts --set prompts/k/sequences.json --out <work>
+# Start one fresh subagent per prompt folder of <work>, at low effort, with the instruction in prompts/README.md.
+python -m general_models_vs_plms.sequence_knowledge score --set prompts/k/sequences.json --prompts <work> --out answers.csv
+T=report/tables/sequence_knowledge
+python -m general_models_vs_plms.knowledge_report --set prompts/k/sequences.json --answers $T/answers.csv --masked $T \
+    --predictions $T/rhomax_predictions.csv --summary report/tables --out <out>
+```
+
+`rhomax_predictions.csv` holds the Rhomax rows of the in-context experiment's scored predictions that the report
+reads. `sequence_knowledge select` draws the set from the splits and those predictions.

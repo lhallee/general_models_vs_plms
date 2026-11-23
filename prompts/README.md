@@ -32,10 +32,23 @@ the tools it called. `tool_calls` in `asked.csv` is that audit, and every answer
 | `g` | No examples, and the published values asked for (`k0_recall`) |
 | `h` | Dataset recognition: the parent and 30 unlabeled rows. In `asked.csv` its `split` reads `recognition` and its `arm` is the dataset |
 | `d1` to `d5` | Validation prompts at five effort levels, used to choose the level |
+| `k` | Sequence completion: pieces of 66 sequences with 15%, 50%, or 85% of the residues hidden. Not in `asked.csv` |
 
 The prompt text is built by `general_models_vs_plms/prompts.py`, and the rows of each task are drawn with a fixed seed
 by `general_models_vs_plms/tasks.py`. The API models read prompts of the same form, three per task, built by the same
 code.
+
+## The sequence completion set
+
+`k` asks for no property. Each of its six prompts holds 33 sequences cut into pieces of 60 residues, with a share
+of the residues replaced by an underscore, and asks for every piece back with the underscores filled in. The 66
+sequences are the 6 dataset parents, 48 Rhomax queries, and shuffled copies of the 6 parents and of 6 rhodopsins.
+Two batches of 33 are each asked three times, so every sequence meets every level once, and no prompt shows a
+residue that another level of the same sequence hides in the same file. `k/sequences.json` is the set, with the
+100 Rhomax queries the masked language models also read, and `k/index.json` says which sequence and level each
+label of each prompt stands for. All six were asked at low effort with the instruction above,
+and each subagent used `Read` and `Write` only. They took 334 to 603 seconds and 33,000 to 63,000 thinking tokens
+each. `general_models_vs_plms/sequence_knowledge.py` builds and scores them.
 
 ## The data in these files
 

@@ -15,6 +15,7 @@
 #   bash box.sh fullref                    features of every training row, then the ridges fit on all of them
 #   bash box.sh more                       ESMC-300M, ESMC-6B and the embedding controls, added to the baselines and tables
 #   bash box.sh tables                     the tidy tables again, from whatever has run
+#   bash box.sh knowledge SET [MODEL ...]  masked recovery and pseudo-log-likelihood of each sequence of a set
 #   bash box.sh extra MODEL EFFORT ARMS    one more model, effort and arm list on the main tasks, then the tables
 #   bash box.sh bundle                     tables, manifests and probes as one archive, $STATE/bundle.tar.gz
 #   bash box.sh logs [LINES]               the ends of the stage logs
@@ -194,6 +195,20 @@ case "$command" in
   tables)
     tables
     ;;
+  knowledge)
+    # Masked recovery and pseudo-log-likelihood of every sequence of a set, one model after another, smallest first, so
+    # the first model's time sizes the rest. The set is a file the launcher shipped, named from the tree's root.
+    set_file=${1:?box.sh knowledge SET_FILE [MODEL ...]}
+    shift
+    for model in "${@:-esmc_300m esmc_600m esm2_650m esmc_6b}"; do
+      for name in $model; do
+        echo "KNOWLEDGE $name START $(date -u +%FT%TZ)"
+        module sequence_knowledge esmc --set "$TREE/$set_file" --out /state/knowledge --model "$name"
+        echo "KNOWLEDGE $name DONE $(date -u +%FT%TZ)"
+      done
+    done > "$STATE/knowledge.log" 2>&1
+    tail -n 12 "$STATE/knowledge.log"
+    ;;
   extra)
     model=${1:?box.sh extra MODEL EFFORT ARMS [SEEDS]}
     claude --model "$model" --effort "${2:?effort}" --arms "${3:?arms}" --seeds "${4:-0}"
@@ -215,7 +230,7 @@ case "$command" in
     ;;
   logs)
     # The ends of the stage logs, with progress bars split into lines.
-    for name in pilot features esmc_6b; do
+    for name in pilot features esmc_6b knowledge; do
       if [ -f "$STATE/$name.log" ]; then
         echo "== $name.log"
         tr '\r' '\n' < "$STATE/$name.log" | tail -n "${1:-12}" | cut -c1-300
