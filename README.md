@@ -7,6 +7,10 @@ than ridge regression on protein language model features? Diego del Alamo asked 
 the models' training data. What others have reported on general language models and protein sequences, with dates
 and authors, is in [SURVEY.md](SURVEY.md).
 
+**Explainer.** [docs/index.html](docs/index.html) walks through every experiment step by step: a primer that explains
+each piece in plain words, then one card per experiment with its question, data, steps, result, and limits. It is one
+self-contained file with its figures inside, so it opens in any browser from a download or a clone.
+
 **It ties, and it does not outperform.** Shown 256 labeled variants, Claude Mythos 5.2 reaches a mean Spearman of 0.380
 over the 16 FLIP2 splits, and the best ridge on ESMC features reaches 0.367 on the same queries. The paired difference
 is +0.013 with a 95% interval of -0.038 to +0.065. The tie holds on an FGFR2 screen published after the model's
@@ -286,6 +290,7 @@ With up to 2,048 examples Claude Fable 5.2 scores 0.386 and the best ridge on th
   subagent was given ([prompts/README.md](prompts/README.md)).
 - `tests/`: the test suite.
 - `Dockerfile`, `box.sh`: the image and the entrypoint the baselines and the API calls ran through.
+- `docs/index.html`: the explainer, one self-contained page.
 - `SURVEY.md`: other public results on general language models and protein sequences.
 
 ```bash
