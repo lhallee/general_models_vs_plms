@@ -1,15 +1,18 @@
 """Join tasks, model replies and baselines with the measured values, and write the tidy tables.
 
     python -m general_models_vs_plms.collect --data DIR --tasks DIR --responses DIR --out DIR [--baselines DIR]
+    python -m general_models_vs_plms.collect --tables DIR --add FILE --out DIR
 
 `predictions.csv.gz` has one row per query and method, `metrics.csv` one row per task and method, and `calls.csv`
-one row per model request.
+one row per model request. The second form copies scored tables with more methods joined on: FILE holds, by task and
+method, one prediction per query in the task's query order, as `preference_tuning` bundles them.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import numpy as np
 import pandas as pd
 
@@ -66,15 +69,57 @@ def reply_predictions(task: Task, folder: Path) -> tuple[np.ndarray, np.ndarray,
     return predictions, answered, calls, len(calls) == len(task.chunks)  # (q,), (q,), one record per prompt that ran
 
 
+def add_methods(tables: Path, methods_by_task: dict[str, dict[str, list[float]]], out: Path) -> None:
+    """Write scored tables that hold every row of `tables` and, scored the same way, the methods given by task.
+
+    The measured values and the strata of a task's queries are read from the rows already scored, so no data file
+    is needed. A method the tables already hold for a task is refused: nothing scored is replaced.
+    """
+    predictions = pd.read_csv(tables / "predictions.csv.gz", dtype={"stratum": str})
+    metrics = pd.read_csv(tables / "metrics.csv")
+    by_task = dict(tuple(predictions.groupby("task_id", sort=False)))
+    prediction_rows, metric_rows = [predictions], []
+    for task_id, methods in methods_by_task.items():
+        assert task_id in by_task, f"the tables hold no task {task_id}"
+        scored = by_task[task_id]
+        queries = scored[scored["method"] == scored["method"].iloc[0]].sort_values("query_id")
+        keys = metrics[metrics["task_id"] == task_id].iloc[0]
+        truth, strata = queries["truth"].to_numpy(), queries["stratum"].to_numpy()  # (q,), (q,)
+        for method, values in methods.items():
+            assert method not in set(scored["method"]), f"{method} is already scored for {task_id}"
+            assert len(values) == len(queries), f"{method} has {len(values)} predictions for the {len(queries)} queries of {task_id}"
+            method_predictions = np.array(values, dtype=float)  # (q,)
+            assert np.isfinite(method_predictions).all(), f"{method} has a prediction for {task_id} that is not a number"
+            metric_rows.append({"task_id": task_id, "split": keys["split"], "arm": keys["arm"], "seed": keys["seed"], "k": keys["k"],
+                                "decimals": keys["decimals"], "method": method, "queries": len(truth), "answered_fraction": 1.0,
+                                **score(truth, method_predictions, strata)})
+            prediction_rows.append(queries.assign(method=method, prediction=method_predictions, answered=True))
+
+    out.mkdir(parents=True, exist_ok=True)
+    pd.concat(prediction_rows, ignore_index=True).to_csv(out / "predictions.csv.gz", index=False)
+    pd.concat([metrics, pd.DataFrame(metric_rows)], ignore_index=True).to_csv(out / "metrics.csv", index=False)
+    for name in ("calls.csv", "incomplete_tasks.txt"):
+        shutil.copyfile(tables / name, out / name)
+    print(f"added {len(metric_rows)} method scores over {len(methods_by_task)} tasks to the tables of {tables}, in {out}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--data", type=Path, required=True)
-    parser.add_argument("--tasks", type=Path, required=True)
-    parser.add_argument("--responses", type=Path, required=True)
+    parser.add_argument("--data", type=Path)
+    parser.add_argument("--tasks", type=Path)
+    parser.add_argument("--responses", type=Path)
     parser.add_argument("--baselines", type=Path)
+    parser.add_argument("--tables", type=Path, help="scored tables to copy with the methods of --add joined on")
+    parser.add_argument("--add", type=Path, help="a file of predictions by task and method, in each task's query order")
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
 
+    if args.tables is not None or args.add is not None:
+        assert args.tables is not None and args.add is not None, "--tables and --add go together"
+        add_methods(args.tables, json.loads(args.add.read_text(encoding="utf-8")), args.out)
+        return
+
+    assert args.data is not None and args.tasks is not None and args.responses is not None, "--data, --tasks and --responses are required"
     args.out.mkdir(parents=True, exist_ok=True)
     infos = {split_info.name: split_info for split_info in plan.ALL_SPLITS}
     model_folders = sorted(path for path in args.responses.iterdir() if path.is_dir() and "__" in path.name)

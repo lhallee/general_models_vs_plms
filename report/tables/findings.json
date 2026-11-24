@@ -114,6 +114,18 @@
   "claude-opus-5-5@low",
   "claude-opus-5@low"
  ],
+ "tuned_models": [
+  "progen2_small",
+  "progen2_base",
+  "progen2_small_slow",
+  "progen2_small_lowrank",
+  "progen2_small_rows",
+  "progen2_small_long",
+  "progen2_small_long20",
+  "progen2_small_long40",
+  "progen2_base_long",
+  "progen2_base_long20"
+ ],
  "best_ridge_at_k256": {
   "flip2": "ridge_onehot_plus_esmc_600m",
   "postcutoff": "ridge_onehot_plus_esm2_650m"
@@ -122,6 +134,11 @@
   "flip2": "ridge_esmc_600m",
   "postcutoff": "ridge_onehot_plus_esmc_6b"
  },
+ "best_ridge_rest": {
+  "flip2": "ridge_onehot_plus_esmc_600m",
+  "postcutoff": "ridge_onehot_plus_esm2_650m"
+ },
+ "rest_queries": "after the first 100",
  "draws": 2000,
  "partly_asked": [
   "claude-mythos-5-2@harness-high k256",

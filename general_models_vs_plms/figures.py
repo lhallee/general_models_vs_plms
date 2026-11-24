@@ -4,8 +4,9 @@
 
 Every figure reads the tables `report` wrote. A row or a point is a method, and its bar is the 95% interval of a
 bootstrap over queries. One color system holds throughout: orange is the primary language model, plum the Claude
-models reached through the public API, aqua a trained ESMC model, blue ESM-2, and gray anything with no trained
-protein model. Rows run from the controls at the top to the result at the bottom.
+models reached through the public API, aqua a trained ESMC model, blue ESM-2, olive a generative protein language
+model read or tuned on the examples, and gray anything with no trained protein model or trained on permuted values.
+Rows run from the controls at the top to the result at the bottom.
 """
 
 from __future__ import annotations
@@ -24,10 +25,11 @@ from matplotlib.lines import Line2D
 from matplotlib.ticker import FuncFormatter
 
 from foundry.plotting.panels import letter_panels
+from . import plan
 from .baselines import PLM_NAMES
 
 
-ORANGE, PLUM, ESM2, ESMC = "#eb6834", "#a03a8c", "#2a78d6", "#1baf7a"
+ORANGE, PLUM, ESM2, ESMC, OLIVE, OLIVE_PALE = "#eb6834", "#a03a8c", "#2a78d6", "#1baf7a", "#7a5a00", "#c9ad55"
 GRAY, PALE, INK, GRID = "#6b6f76", "#b9bcc2", "#1f2328", "#e6e7ea"
 MYTHOS = "claude-mythos-5-2@harness"
 API_SELECTED, API_CHEAP = "claude-fable-5-2@high", "claude-fable-5-2@low"
@@ -47,6 +49,27 @@ METHOD_LABELS = {
     "ridge_esmc_300m_permuted": "Ridge on ESMC-300M, positions scrambled", "ridge_esmc_600m_shuffled": "Ridge on ESMC-600M, residues shuffled",
     "ridge_esmc_600m_permuted": "Ridge on ESMC-600M, positions scrambled",
 }
+TUNED_LABELS = {"progen2_small": "ProGen2-small", "progen2_base": "ProGen2-base"}
+TUNED_ARM_LABELS = {
+    "zero": "{} score, no examples", "ridge": "Ridge on {} hidden states", "dpo": "{} tuned, ranked preference loss (DPO)",
+    "bt": "{} tuned, Bradley-Terry loss", "dpo_shuffled": "{} tuned (DPO) on shuffled values",
+    "dpo_seed1": "{} tuned (DPO), second batch order", "dpo_seed2": "{} tuned (DPO), third batch order",
+}
+# The same arms under a heading that already names the model; the control's heading names what it is, so its row
+# names the model.
+TUNED_ROW_LABELS = {
+    "zero": "Score of the sequence", "ridge": "Ridge on hidden states", "dpo": "Tuned, ranked preference loss (DPO)",
+    "bt": "Tuned, Bradley-Terry loss", "dpo_shuffled": "{}, ranked preference loss",
+}
+TUNED_MARKERS = {"zero": "^", "ridge": "o", "dpo": "h", "bt": "h", "dpo_shuffled": "h", "dpo_seed1": "h", "dpo_seed2": "h"}
+# What each variant of the tuning changed, for a row under a heading that names the model. The variants ran after the
+# reported scores were seen.
+VARIANT_LABELS = {"progen2_small_slow": "Learning rate 0.000001, a tenth of the grid's lowest",
+                  "progen2_small_lowrank": "Low-rank update, every released weight frozen",
+                  "progen2_small_rows": "Every labeled row of the split, up to 2,048",
+                  "progen2_small_long": "One setting, up to 40 epochs, checkpoint chosen",
+                  "progen2_small_long20": "One setting, 20 epochs, nothing chosen",
+                  "progen2_small_long40": "One setting, 40 epochs, nothing chosen"}
 DATASET_LABELS = {"amylase": "Amylase", "ired": "IRED", "nucb": "NucB", "trpb": "TrpB", "hydro": "Hydro", "rhomax": "RhoMax",
                   "pdz3": "PDZ3", "fgfr2": "FGFR2"}
 ARM_LABELS = {"k256_flipped": "256 examples, values reversed", "k256_shuffled": "256 examples, values shuffled",
@@ -82,10 +105,21 @@ def effort_of(method: str) -> str | None:
     return method.removeprefix(f"{MYTHOS}-") if method.startswith(f"{MYTHOS}-") else None
 
 
+def tuned_arm(method: str) -> tuple[str, str] | None:
+    """The model and the arm of a preference-tuning method, such as `progen2_small_dpo`, or None for any other method."""
+    for model in plan.PREFERENCE_MODELS:
+        if method.startswith(f"{model}_") and method.removeprefix(f"{model}_") in plan.PREFERENCE_ARMS:
+            return model, method.removeprefix(f"{model}_")
+    return None
+
+
 def label_of(method: str) -> str:
     """A method's name in plain words."""
     if effort_of(method):
         return f"Claude Mythos 5.2, {EFFORT_WORDS[effort_of(method)]} effort"
+    found = tuned_arm(method)
+    if found:
+        return TUNED_ARM_LABELS[found[1]].format(TUNED_LABELS[found[0]])
     if method in MODEL_LABELS:
         return MODEL_LABELS[method]
     if method in METHOD_LABELS:
@@ -108,6 +142,8 @@ def color_of(method: str, primary: str) -> str:
         return PLUM
     if any(method.endswith(tag) for tag in ("_random", "_shuffled", "_permuted")) or method in METHOD_LABELS:
         return GRAY
+    if tuned_arm(method):
+        return OLIVE
     if "esm2" in method:
         return ESM2
     if "esmc" in method:
@@ -119,6 +155,9 @@ def marker_of(method: str) -> str:
     """Circle for a ridge on an embedding and a language model, square for an augmented ridge, triangle for zero-shot."""
     if method in CONTROL_MARKERS:
         return CONTROL_MARKERS[method]
+    found = tuned_arm(method)
+    if found:
+        return TUNED_MARKERS[found[1]]
     if method.startswith("zero_shot_"):
         return "^"
     if method.startswith("ridge_onehot_plus_"):
@@ -136,6 +175,7 @@ class Summary:
     """The tables `report` wrote, with the lookups the figures share."""
 
     def __init__(self, folder: Path, primary: str) -> None:
+        self.folder = folder
         self.means = pd.read_csv(folder / "means.csv")
         self.per_split = pd.read_csv(folder / "per_split.csv")
         self.paired = pd.read_csv(folder / "paired.csv")
@@ -397,6 +437,242 @@ def tiers_both(summary: Summary, out: Path) -> None:
     letter_panels(axes)
     figure.subplots_adjust(wspace=0.10)
     save(figure, out, "tiers_both")
+
+
+def tuned_rows(summary: Summary, group: str = "flip2") -> list[Row]:
+    """A tuned protein language model beside what it is read against: its control, itself untuned, a ridge, and the model.
+
+    Inside a block the rows run from the lowest mean over the benchmark to the highest, in every panel. An arm a
+    model did not run has no row. Only the first tuned model is drawn, the one whose design was fixed before any
+    score was seen; `scale_rows` holds what was run afterward.
+    """
+    tuned = summary.found["tuned_models"][:1]
+    blocks = [("Control: tuned on shuffled values", [f"{model}_dpo_shuffled" for model in tuned])]
+    for model in tuned:
+        blocks.append((f"{TUNED_LABELS[model]}, no examples", [f"{model}_zero"]))
+        blocks.append((f"{TUNED_LABELS[model]}, 256 examples", [f"{model}_ridge", f"{model}_bt", f"{model}_dpo"]))
+    blocks.append(("ESMC + ridge, 256 examples", list(dict.fromkeys(summary.best_ridge(name) for name in ("flip2", "postcutoff")))))
+    blocks.append(("General language model, 256 examples in its prompt", [summary.primary]))
+    rows = []
+    for heading, methods in blocks:
+        methods = [method for method in methods if summary.has(method)]
+        if not methods:
+            continue
+        rows.append(Row(heading, heading=True))
+        for method in sorted(methods, key=lambda method: summary.mean(method)["mean"]):
+            # Under a heading that names the model, a row says only what was done with it.
+            found = tuned_arm(method)
+            label = TUNED_ROW_LABELS[found[1]].format(TUNED_LABELS[found[0]]) if found else None
+            rows.append(summary.row(method, group=group, label=label, hollow=method.endswith("_bt")))
+    return rows
+
+
+def preference_tuning(summary: Summary, out: Path) -> None:
+    """A generative protein language model tuned on the 256 examples, on the benchmark and on the later dataset."""
+    panels = [("flip2", "FLIP2 splits"), ("postcutoff", "FGFR2 splits published after the training cutoff")]
+    figure, axes = plt.subplots(1, 2, figsize=(11.4, chart_height(tuned_rows(summary)) + 0.2), sharey=True)
+    for axis, (group, words) in zip(axes, panels, strict=True):
+        rows = tuned_rows(summary, group)
+        # The scope goes on a line of its own, since a panel is narrower here than the label is long.
+        scope = summary.scope_words().replace(", ", ",\n", 1)
+        dot_chart(axis, rows, f"{SCORE},\nmean of {summary.splits(group)} {words}{scope}")
+        shade_primary(axis, rows)
+    letter_panels(axes)
+    figure.subplots_adjust(wspace=0.10)
+    save(figure, out, "preference_tuning")
+
+
+def scale_rows(summary: Summary, group: str = "flip2") -> list[Row]:
+    """What was run after the reported scores were seen, between the reported arm and what it is read against.
+
+    The blocks: the first tuned model as reported, each variant of its tuning, a larger checkpoint, and the reported
+    arm's ranks averaged with another method's. A block keeps the order of its rows in every panel, and a run that
+    did not finish on every split of the benchmark has no row.
+    """
+    first, *others = summary.found["tuned_models"]
+    ridges = list(dict.fromkeys(summary.best_ridge(name) for name in ("flip2", "postcutoff")))
+    name = TUNED_LABELS[first]
+    blocks: list[tuple[str, list[tuple[str, str, str, str, bool]]]] = [
+        (f"{name}, as reported", [(f"{first}_zero", "k256", "Score of the sequence, no examples", "^", False),
+                                  (f"{first}_dpo", "k256", "Tuned on 256 examples", "h", False)]),
+        (f"{name} tuned another way", [(f"{model}_dpo", plan.PREFERENCE_TASK_ARMS.get(model, "k256"), VARIANT_LABELS[model], "h", True)
+                                       for model in others if model in VARIANT_LABELS]),
+    ]
+    for model in others:
+        if model in TUNED_LABELS:
+            blocks.append((f"A larger checkpoint: {TUNED_LABELS[model]}", [
+                (f"{model}_zero", "k256", "Score of the sequence, no examples", "^", False),
+                (f"{model}_ridge", "k256", "Ridge on hidden states, 256 examples", "o", False),
+                (f"{model}_dpo", "k256", "Tuned on 256 examples", "h", False),
+                (f"{model}_long20_dpo", "k256", "Tuned, one setting, 20 epochs, nothing chosen", "h", True)]))
+    partners = [("orders", "its two other batch orders"), (f"{first}_zero", "its own score with no examples"),
+                *((ridge, label_of(ridge)) for ridge in ridges),
+                ("zero_shot_esmc_600m", label_of("zero_shot_esmc_600m")), (summary.primary, label_of(summary.primary))]
+    blocks.append((f"Tuned {name}, ranks averaged with", [(f"{first}_dpo+{other}", "k256", label[0].upper() + label[1:], "D", False)
+                                                         for other, label in partners]))
+    rows = []
+    for heading, entries in blocks:
+        entries = [entry for entry in entries if summary.has(entry[0], entry[1])]
+        if not entries:
+            continue
+        rows.append(Row(heading, heading=True))
+        rows += [summary.row(method, arm, group, label=label, hollow=hollow, color=OLIVE, marker=marker)
+                 for method, arm, label, marker, hollow in entries]
+    rows.append(Row("ESMC + ridge, 256 examples", heading=True))
+    rows += [summary.row(ridge, group=group) for ridge in ridges]
+    rows.append(Row("General language model, 256 examples in its prompt", heading=True))
+    rows.append(summary.row(summary.primary, group=group))
+    return rows
+
+
+def preference_scale(summary: Summary, out: Path) -> None:
+    """Other scales of the tuning, a larger checkpoint, and rank averages, beside the reported arm and its references."""
+    panels = [("flip2", "FLIP2 splits"), ("postcutoff", "FGFR2 splits published after the training cutoff")]
+    figure, axes = plt.subplots(1, 2, figsize=(12.0, chart_height(scale_rows(summary)) + 0.2), sharey=True)
+    for axis, (group, words) in zip(axes, panels, strict=True):
+        rows = scale_rows(summary, group)
+        scope = summary.scope_words().replace(", ", ",\n", 1)
+        dot_chart(axis, rows, f"{SCORE},\nmean of {summary.splits(group)} {words}{scope}")
+        shade_primary(axis, rows)
+    letter_panels(axes)
+    figure.subplots_adjust(wspace=0.10)
+    save(figure, out, "preference_scale")
+
+
+def preference_by_split(summary: Summary, out: Path) -> None:
+    """Split by split, the tuned protein language model beside the language model and the best ridge.
+
+    Rows run from the split where tuning trails the language model most to the split where it leads most, the
+    benchmark's splits first and the later dataset's below them.
+    """
+    tuned, best, model = f"{summary.found['tuned_models'][0]}_dpo", summary.best_ridge(), summary.primary
+    table = summary.per_split[(summary.per_split["queries"] == summary.scope) & (summary.per_split["seeds"] == "seed 0")
+                              & (summary.per_split["arm"] == "k256")]
+    scores = table.set_index(["split", "method"])["spearman"]
+    groups = summary.found["groups"]
+    ordered = [sorted(groups[name], key=lambda split: scores[(split, tuned)] - scores[(split, model)])
+               for name in ("flip2", "postcutoff")]
+    splits = [*ordered[0], *ordered[1]]
+    positions = [float(index) for index in range(len(ordered[0]))] + [len(ordered[0]) + 1.0 + index for index in range(len(ordered[1]))]
+    marks = {best: ("o", summary.color(best)), tuned: ("h", OLIVE), model: ("o", ORANGE)}
+    figure, axis = plt.subplots(figsize=(7.4, 1.3 + 0.3 * (len(splits) + 1)))
+    for y, split in zip(positions, splits, strict=True):
+        found = [scores[(split, method)] for method in marks]
+        axis.plot([min(found), max(found)], [y, y], color=PALE, linewidth=1.4, zorder=1)
+        for value, (marker, color) in zip(found, marks.values(), strict=True):
+            axis.plot([value], [y], marker=marker, markersize=7.5, color=color, markeredgecolor="white", markeredgewidth=0.8,
+                      linestyle="none", zorder=3)
+    finish_rows(axis, positions, [split_label(split) for split in splits], f"{SCORE}, 256 examples{summary.scope_words()}")
+    axis.axvline(0.0, color=GRAY, linewidth=0.8, zorder=1)
+    axis.invert_yaxis()
+    handles = [Line2D([], [], marker=marker, color=color, linestyle="none", markersize=7.5, label=label_of(method))
+               for method, (marker, color) in marks.items()]
+    axis.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=1, handletextpad=0.3)
+    save(figure, out, "preference_by_split")
+
+
+def preference_trace(summary: Summary, out: Path) -> None:
+    """Every epoch of every setting of the ranked loss, on the held-out rows and on the queries.
+
+    Reads `preference_trace.csv`, which `report --trace` writes, and `preference_tuning.csv`. A line is the mean over
+    the benchmark's splits of one Spearman a split and has no interval. Comparing its points on the queries reads
+    their measured values, which no reported score does.
+    """
+    model = summary.found["tuned_models"][0]
+    splits = summary.found["groups"]["flip2"]
+    trace = pd.read_csv(summary.folder / "preference_trace.csv")
+    trace = trace[(trace["model"] == model) & (trace["arm"] == "dpo") & trace["split"].isin(splits)]
+    chosen = pd.read_csv(summary.folder / "preference_tuning.csv")
+    chosen = chosen[(chosen["model"] == model) & (chosen["arm"] == "dpo") & chosen["split"].isin(splits)]
+    assert trace["split"].nunique() == len(splits) == len(chosen), f"the trace holds {trace['split'].nunique()} of {len(splits)} splits"
+    queries = int(trace["queries"].iloc[0])
+    reported, primary, ridge = summary.mean(f"{model}_dpo"), summary.mean(summary.primary), summary.mean(summary.best_ridge())
+    starts = {"held_out_spearman": chosen["held_out_spearman_untuned"].mean(), "spearman": summary.mean(f"{model}_zero")["mean"]}
+    panels = [("held_out_spearman", f"Epochs of tuning, scored on the {int(chosen['held_out_rows'].iloc[0])} held-out rows"),
+              ("spearman", f"Epochs of tuning, scored on the first {queries} queries")]
+    rates = sorted(trace["learning_rate"].unique())
+    figure, axes = plt.subplots(1, 2, figsize=(10.4, 4.0), sharey=True)
+    for axis, (column, xlabel) in zip(axes, panels, strict=True):
+        curves = trace.groupby(["learning_rate", "beta", "epoch"])[column].mean()
+        for (rate, beta), curve in curves.groupby(level=["learning_rate", "beta"]):
+            epochs = [0, *curve.index.get_level_values("epoch")]
+            color, style = (OLIVE if rate == rates[0] else OLIVE_PALE), ("-" if beta == trace["beta"].max() else "--")
+            axis.plot(epochs, [starts[column], *curve.to_numpy()], color=color, linestyle=style, linewidth=2.0,
+                      label=f"Learning rate {f'{rate:.5f}'.rstrip('0')}, weight of a ratio {beta:g}")
+        axis.plot([0], [starts[column]], marker="^", markersize=7, markerfacecolor="white", markeredgecolor=OLIVE, markeredgewidth=1.8,
+                  linestyle="none")
+        axis.set_xlabel(xlabel)
+        axis.set_xlim(-0.6, trace["epoch"].max() + 0.4)
+        axis.set_xticks(range(0, int(trace["epoch"].max()) + 1, 5))
+        quiet(axis, "y")
+    held, test = axes
+    held.set_ylabel(f"{SCORE},\nmean of {len(splits)} FLIP2 splits")
+    # The lines are the same in both panels. Their key sits above the queries' scores, where that panel is empty.
+    test.legend(loc="upper left", ncol=1, handlelength=2.6)
+    # On the queries: the two methods the tuned model is read against, and the score the run reports.
+    test.axhspan(primary["low"], primary["high"], color=ORANGE, alpha=0.10, linewidth=0)
+    marks = [(primary["mean"], label_of(summary.primary), ORANGE), (ridge["mean"], label_of(summary.best_ridge()), summary.color(summary.best_ridge())),
+             (reported["mean"], "Reported: the checkpoint the\nheld-out rows chose", OLIVE)]
+    placed: list[float] = []
+    for value, label, color in sorted(marks):
+        test.axhline(value, color=color, linewidth=1.3, linestyle=":" if color == OLIVE else "-")
+        y = value if not placed or value - placed[-1] >= 0.03 else placed[-1] + 0.03
+        placed.append(y)
+        test.annotate(label, (trace["epoch"].max() + 0.4, y), xytext=(6, 0), textcoords="offset points", ha="left", va="center",
+                      fontsize=8.5, color=color, annotation_clip=False)
+    letter_panels(axes)
+    figure.subplots_adjust(wspace=0.08)
+    save(figure, out, "preference_trace")
+
+
+def preference_long(summary: Summary, out: Path) -> None:
+    """One setting of the ranked loss run for twice the epochs, on the held-out rows and on every query.
+
+    Reads the rows of the `long` variant in `preference_trace.csv`. The run scores every query of a split after every
+    epoch, so its points are read against the best ridge and the reported arm on all queries, which the primary
+    language model did not answer. A line is the mean over the benchmark's splits and has no interval.
+    """
+    first = summary.found["tuned_models"][0]
+    model, splits = f"{first}_long", summary.found["groups"]["flip2"]
+    trace = pd.read_csv(summary.folder / "preference_trace.csv")
+    trace = trace[(trace["model"] == model) & (trace["arm"] == "dpo") & trace["split"].isin(splits)]
+    chosen = pd.read_csv(summary.folder / "preference_tuning.csv")
+    chosen = chosen[(chosen["model"] == model) & (chosen["arm"] == "dpo") & chosen["split"].isin(splits)]
+    assert trace["split"].nunique() == len(splits) == len(chosen), f"the longer run holds {trace['split'].nunique()} of {len(splits)} splits"
+    assert len(trace[["learning_rate", "beta"]].drop_duplicates()) == 1, "the longer run has one setting"
+    best = summary.found["best_ridge_at_k256"]["flip2"]
+    ridge, reported = summary.mean(best, queries="all"), summary.mean(f"{first}_dpo", queries="all")
+    starts = {"held_out_spearman": chosen["held_out_spearman_untuned"].mean(), "spearman": summary.mean(f"{first}_zero", queries="all")["mean"]}
+    panels = [("held_out_spearman", f"Epochs of tuning, scored on the {int(chosen['held_out_rows'].iloc[0])} held-out rows"),
+              ("spearman", "Epochs of tuning, scored on every query")]
+    last = int(trace["epoch"].max())
+    figure, axes = plt.subplots(1, 2, figsize=(10.4, 4.0), sharey=True)
+    for axis, (column, xlabel) in zip(axes, panels, strict=True):
+        curve = trace.groupby("epoch")[column].mean()
+        axis.plot([0, *curve.index], [starts[column], *curve.to_numpy()], color=OLIVE, linewidth=2.0)
+        axis.plot([0], [starts[column]], marker="^", markersize=7, markerfacecolor="white", markeredgecolor=OLIVE, markeredgewidth=1.8,
+                  linestyle="none")
+        axis.set_xlabel(xlabel)
+        axis.set_xlim(-0.8, last + 0.6)
+        axis.set_xticks(range(0, last + 1, 5))
+        quiet(axis, "y")
+    held, test = axes
+    held.set_ylabel(f"{SCORE},\nmean of {len(splits)} FLIP2 splits")
+    # The two epochs read with nothing chosen, named before the run.
+    curve = trace.groupby("epoch")["spearman"].mean()
+    for epoch in (20, last):
+        test.plot([epoch], [curve[epoch]], marker="h", markersize=9, color=OLIVE, linestyle="none")
+        test.annotate(f"{curve[epoch]:.2f}", (epoch, curve[epoch]), xytext=(0, 9), textcoords="offset points", ha="center", fontsize=8.5,
+                      color=OLIVE)
+    test.axhspan(ridge["low"], ridge["high"], color=summary.color(best), alpha=0.10, linewidth=0)
+    for found, label, color, style in ((ridge, label_of(best), summary.color(best), "-"),
+                                       (reported, "Reported: the checkpoint the\nheld-out rows chose", OLIVE, ":")):
+        test.axhline(found["mean"], color=color, linewidth=1.3, linestyle=style)
+        test.annotate(label, (last + 0.6, found["mean"]), xytext=(6, 0), textcoords="offset points", ha="left", va="center", fontsize=8.5,
+                      color=color, annotation_clip=False)
+    letter_panels(axes)
+    figure.subplots_adjust(wspace=0.08)
+    save(figure, out, "preference_long")
 
 
 def per_split(summary: Summary, out: Path) -> None:
@@ -827,7 +1103,9 @@ FIGURES = {"headline": headline, "tiers": tiers, "tiers_both": tiers_both, "per_
            "arms_by_split": arms_by_split,
            "plm_models": plm_models, "learning_curve": learning_curve, "claude_models": claude_models, "refusals": refusals,
            "complementarity": complementarity, "within_groups": within_groups, "postcutoff": postcutoff, "effort": effort,
-           "exact_matches": exact_matches, "api_controls": api_controls, "api_effort": api_effort}
+           "exact_matches": exact_matches, "api_controls": api_controls, "api_effort": api_effort,
+           "preference_tuning": preference_tuning, "preference_by_split": preference_by_split, "preference_trace": preference_trace,
+           "preference_long": preference_long, "preference_scale": preference_scale}
 
 
 def main() -> None:

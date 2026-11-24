@@ -170,6 +170,185 @@ def test_baseline_questions_pair_a_control_with_the_model_it_was_made_from() -> 
                      ("ridge_onehot", "ridge_composition"), ("ridge_esmc_300m", "ridge_onehot"), ("ridge_esmc_600m", "ridge_onehot")}
 
 
+def test_tuned_questions_set_each_tuned_arm_against_its_controls_the_baselines_and_the_language_model() -> None:
+    generator = np.random.default_rng(8)
+    truth = generator.normal(size=40)
+    methods = [f"progen2_small_{arm}" for arm in plan.PREFERENCE_ARMS] + ["ridge_esmc_600m", "ridge_onehot", "claude-x@low"]
+    predictions = pd.concat([pd.DataFrame({
+        "task_id": "a/one__k256__s0", "split": "a/one", "method": method, "arm": "k256", "seed": 0, "truth": truth,
+        "query_id": [f"Q{index + 1:03d}" for index in range(40)], "prediction": truth + generator.normal(size=40)}) for method in methods])
+    scores = report.Scores(predictions)
+
+    asked = {(left.method, right.method) for _, left, right in report.tuned_questions(scores, ["claude-x@low"], "ridge_esmc_600m")}
+
+    assert report.tuned_models(scores) == ["progen2_small"]
+    for pair in (("progen2_small_dpo", "progen2_small_zero"), ("progen2_small_dpo", "progen2_small_ridge"),
+                 ("progen2_small_dpo", "progen2_small_bt"), ("progen2_small_dpo", "progen2_small_dpo_shuffled"),
+                 ("progen2_small_dpo_shuffled", "progen2_small_zero"),
+                 ("progen2_small_dpo", "progen2_small_dpo_seed2"), ("progen2_small_dpo", "ridge_esmc_600m"),
+                 ("progen2_small_zero", "ridge_onehot"), ("progen2_small_dpo", "claude-x@low"), ("progen2_small_bt", "claude-x@low")):
+        assert pair in asked
+    # A reference that was not scored and a model that was not tuned ask nothing.
+    assert not any("zero_shot_esmc_6b" in pair or "progen2_base_dpo" in pair for pair in asked)
+    rows = report.paired_rows(scores, ["a/one"], report.tuned_questions(scores, ["claude-x@low"], "ridge_esmc_600m"))
+    assert len(rows) == len(asked) and all(row["splits"] == 1 for row in rows)
+
+
+def tuned_toy(methods: list[tuple[str, str]], queries: int = 40) -> pd.DataFrame:
+    """Noisy predictions of one split's queries for each method and arm, the queries shared by every arm."""
+    generator = np.random.default_rng(9)
+    truth = generator.normal(size=queries)
+    return pd.concat([pd.DataFrame({
+        "task_id": f"a/one__{arm}__s0", "split": "a/one", "method": method, "arm": arm, "seed": 0, "truth": truth,
+        "query_id": [f"Q{index + 1:03d}" for index in range(queries)],
+        "prediction": truth + generator.normal(size=queries)}) for method, arm in methods], ignore_index=True)
+
+
+def test_tuned_blends_average_the_ranks_of_the_tuned_arm_and_each_other_method_that_ran() -> None:
+    predictions = tuned_toy([("progen2_small_dpo", "k256"), ("ridge_esmc_600m", "k256"), ("ridge_esmc_600m", "klarge")])
+
+    blends = report.tuned_blends(predictions, "progen2_small", ["ridge_esmc_600m", "zero_shot_esmc_600m"])
+
+    assert len(blends) == 1  # the method that did not run makes no blend
+    blend = blends[0].sort_values("query_id")
+    assert set(blend["method"]) == {"progen2_small_dpo+ridge_esmc_600m"} and set(blend["arm"]) == {"k256"} and len(blend) == 40
+    parts = predictions[predictions["arm"] == "k256"].pivot(index="query_id", columns="method", values="prediction").sort_index()
+    np.testing.assert_allclose(blend["prediction"].to_numpy(), parts.rank().mean(axis=1).to_numpy())
+
+
+def test_tuned_questions_set_a_variant_on_its_own_tasks_against_the_primary_arm_and_a_blend_against_its_parts() -> None:
+    predictions = tuned_toy([
+        ("progen2_small_dpo", "k256"), ("progen2_small_zero", "k256"), ("ridge_esmc_600m", "k256"),
+        ("progen2_small_rows_dpo", "klarge"), ("progen2_small_rows_zero", "klarge"), ("ridge_esmc_600m", "klarge"),
+        ("progen2_small_slow_dpo", "k256"), ("claude-x@low", "k256")])
+    scores = report.Scores(predictions)
+    for blend in report.tuned_blends(predictions, "progen2_small", ["ridge_esmc_600m", "claude-x@low"]):
+        scores.add(blend)
+
+    asked = {(left.method, left.arm, right.method, right.arm)
+             for _, left, right in report.tuned_questions(scores, ["claude-x@low"], "ridge_esmc_600m")}
+
+    assert report.tuned_models(scores) == ["progen2_small", "progen2_small_slow", "progen2_small_rows"]
+    assert report.tuned_arm_of("progen2_small_rows") == "klarge" and report.tuned_arm_of("progen2_small_slow") == "k256"
+    for question in (
+            # a variant against the primary arm, each on the tasks it ran on
+            ("progen2_small_rows_dpo", "klarge", "progen2_small_dpo", "k256"),
+            ("progen2_small_rows_zero", "klarge", "progen2_small_zero", "k256"),
+            ("progen2_small_slow_dpo", "k256", "progen2_small_dpo", "k256"),
+            # a variant that scored no released model of its own is still set against the first model's
+            ("progen2_small_slow_dpo", "k256", "progen2_small_zero", "k256"),
+            # a variant against the baseline fitted on the rows it was tuned on
+            ("progen2_small_rows_dpo", "klarge", "ridge_esmc_600m", "klarge"),
+            ("progen2_small_slow_dpo", "k256", "ridge_esmc_600m", "k256"),
+            # a language model answered the k256 prompt only
+            ("progen2_small_rows_dpo", "klarge", "claude-x@low", "k256"),
+            # a blend against each of its two parts
+            ("progen2_small_dpo+ridge_esmc_600m", "k256", "progen2_small_dpo", "k256"),
+            ("progen2_small_dpo+ridge_esmc_600m", "k256", "ridge_esmc_600m", "k256"),
+            ("progen2_small_dpo+claude-x@low", "k256", "claude-x@low", "k256")):
+        assert question in asked
+    # The primary arm is not set against itself, and no variant is blended.
+    assert ("progen2_small_dpo", "k256", "progen2_small_dpo", "k256") not in asked
+    assert not any(left.startswith("progen2_small_rows_dpo+") for left, *_ in asked)
+    rows = report.paired_rows(scores, ["a/one"], report.tuned_questions(scores, ["claude-x@low"], "ridge_esmc_600m"))
+    assert len(rows) == len(asked) and all(row["splits"] == 1 for row in rows)
+
+
+def test_tuned_orders_average_the_ranks_of_every_batch_order_and_ask_nothing_until_all_ran() -> None:
+    orders = [("progen2_small_dpo", "k256"), ("progen2_small_dpo_seed1", "k256"), ("progen2_small_dpo_seed2", "k256")]
+    predictions = tuned_toy([*orders, ("ridge_esmc_600m", "k256"), ("claude-x@low", "k256")])
+
+    averaged = report.tuned_orders(predictions, "progen2_small").sort_values("query_id")
+
+    assert set(averaged["method"]) == {"progen2_small_dpo+orders"} and len(averaged) == 40
+    wide = predictions[predictions["method"].isin([method for method, _ in orders])].pivot(index="query_id", columns="method", values="prediction")
+    np.testing.assert_allclose(averaged["prediction"].to_numpy(), wide.sort_index().rank().mean(axis=1).to_numpy())
+    assert report.tuned_orders(predictions[predictions["method"] != "progen2_small_dpo_seed2"], "progen2_small").empty
+    scores = report.Scores(predictions)
+    scores.add(averaged)
+    asked = {(left.method, right.method) for _, left, right in report.tuned_questions(scores, ["claude-x@low"], "ridge_esmc_600m")}
+    assert {("progen2_small_dpo+orders", "progen2_small_dpo"), ("progen2_small_dpo+orders", "ridge_esmc_600m"),
+            ("progen2_small_dpo+orders", "claude-x@low")} <= asked
+
+
+def test_inside_tables_set_a_tuned_model_on_its_held_out_rows_against_the_baselines_fit_on_its_tuning_rows() -> None:
+    splits = ["a/one", "a/two", "fgfr2/random"]
+    inside = [{"task_id": f"{split}__k256__s0", "split": split, "fit_rows": 205, "held_out_rows": 51,
+               "held_out_spearman": {"ridge_onehot": 0.5, "ridge_esmc_600m": 0.6 + 0.1 * index}} for index, split in enumerate(splits)]
+
+    def record(split: str, lift: float, **more: object) -> dict[str, object]:
+        curves = [{"learning_rate": 1e-5, "beta": 2.0, "held_out_spearman": [0.30 + lift + 0.01 * epoch for epoch in range(1, 21)]},
+                  {"learning_rate": 1e-4, "beta": 2.0, "held_out_spearman": [0.9] + [0.1] * 19}]
+        return {"model": ["hugohrban/progen2-small", "43237a0b"], "split": split, "fit_rows": 205, "held_out_rows": 51,
+                "held_out_spearman_untuned": 0.2, "failed": {},
+                "arms": {"dpo": {"recipe": {"loss": "dpo", "learning_rate": 1e-4, "beta": 2.0}, "epoch": 1, "curves": curves}}, **more}
+
+    records = [record(split, 0.1 * index) for index, split in enumerate(splits)]
+    # A run on another arm of the tasks holds out other rows and has no place here.
+    records.append(record("a/one", 0.0, arm="klarge", method_prefix="progen2_small_rows"))
+
+    table = report.inside_table(inside, records)
+    differences = report.inside_differences(table, {"flip2": ["a/one", "a/two"], "postcutoff": ["fgfr2/random"]})
+
+    assert set(table["method"]) == {"ridge_onehot", "ridge_esmc_600m", "progen2_small_zero", "progen2_small_dpo"}
+    tuned = table[table["method"] == "progen2_small_dpo"]
+    assert len(tuned) == 3 * 2 * 20 and tuned["chosen"].sum() == 3
+    assert tuned[tuned["chosen"]]["held_out_spearman"].tolist() == [0.9, 0.9, 0.9]
+    found = differences.set_index(["group", "tuned", "baseline"])
+    # After epoch 5 of the fixed setting the two splits score 0.35 and 0.45, against a ridge at 0.6 and 0.7.
+    row = found.loc[("flip2", "epoch 5", "ridge_esmc_600m")]
+    assert (row["splits"], row["ahead"]) == (2, 0)
+    assert (row["tuned_mean"], row["baseline_mean"], row["difference"]) == pytest.approx((0.40, 0.65, -0.25))
+    assert row["low"] <= row["difference"] <= row["high"]
+    assert found.loc[("flip2", "chosen", "ridge_onehot"), "ahead"] == 2
+    assert found.loc[("flip2", "untuned", "ridge_onehot"), "difference"] == pytest.approx(-0.3)
+    assert found.loc[("postcutoff", "epoch 20", "ridge_esmc_600m"), "difference"] == pytest.approx(0.7 - 0.8)
+    assert set(differences["model"]) == {"progen2_small"}
+
+
+def test_tuned_name_is_the_variant_a_record_ran_under_and_otherwise_its_checkpoint() -> None:
+    assert report.tuned_name({"model": ["hugohrban/progen2-small", "43237a0b"]}) == "progen2_small"
+    assert report.tuned_name({"model": ["hugohrban/progen2-small", "43237a0b"], "method_prefix": "progen2_small_rows"}) == "progen2_small_rows"
+
+
+def test_tuning_table_holds_one_row_an_arm_with_its_chosen_recipe_or_its_failure() -> None:
+    record = {
+        "model": ["hugohrban/progen2-small", "43237a0b"], "split": "a/one", "fit_rows": 205, "held_out_rows": 51,
+        "held_out_spearman_untuned": 0.1, "failed": {"bt": "the loss is nan in epoch 2"},
+        "arms": {"dpo": {"recipe": {"loss": "dpo", "learning_rate": 1e-4, "beta": 2.0}, "epoch": 7, "held_out_spearman": 0.5,
+                         "curves": [], "seconds": 60.0}},
+    }
+
+    table = report.tuning_table([record]).set_index("arm")
+
+    assert list(table.index) == ["dpo", "bt"] and set(table["model"]) == {"progen2_small"}
+    chosen = table.loc["dpo"]
+    assert (chosen["learning_rate"], chosen["beta"], chosen["epoch"], chosen["held_out_spearman"]) == (1e-4, 2.0, 7, 0.5)
+    assert chosen["failed"] == "" and chosen["held_out_spearman_untuned"] == 0.1 and chosen["fit_rows"] == 205
+    assert table.loc["bt", "failed"] == "the loss is nan in epoch 2" and np.isnan(table.loc["bt", "epoch"])
+
+
+def test_trace_table_scores_every_epoch_on_the_traced_queries_and_marks_the_chosen_one() -> None:
+    predictions = pd.DataFrame({"task_id": "t", "method": ["m"] * 4 + ["n"] * 4, "query_id": ["Q0", "Q1", "Q2", "Q3"] * 2,
+                                "truth": [1.0, 2.0, 3.0, 4.0] * 2})
+    rising, falling = [0.1, 0.2, 0.3], [0.3, 0.2, 0.1]
+    record = {
+        "model": ["hugohrban/progen2-small", "43237a0b"], "task_id": "t", "split": "a/one", "traced_queries": 3,
+        "arms": {"dpo": {"recipe": {"loss": "dpo", "learning_rate": 1e-5, "beta": 2.0}, "epoch": 2, "held_out_spearman": 0.6, "curves": [
+            {"loss": "dpo", "learning_rate": 1e-5, "beta": 0.1, "held_out_spearman": [0.2, 0.3], "query_scores": [rising, rising]},
+            {"loss": "dpo", "learning_rate": 1e-5, "beta": 2.0, "held_out_spearman": [0.4, 0.6], "query_scores": [rising, falling]},
+        ]}},
+    }
+
+    table = report.trace_table([record], predictions)
+
+    assert list(table["epoch"]) == [1, 2, 1, 2] and set(table["queries"]) == {3} and set(table["model"]) == {"progen2_small"}
+    # Only the first three queries are scored: the fourth was not traced.
+    assert list(table["spearman"]) == [1.0, 1.0, 1.0, -1.0]
+    assert list(table["chosen"]) == [False, False, False, True]
+    assert list(table["held_out_spearman"]) == [0.2, 0.3, 0.4, 0.6]
+
+
 def test_match_groups_set_apart_the_splits_whose_values_repeat() -> None:
     frame = pd.DataFrame({"split": ["a/one"] * 6 + ["a/two"] * 6, "query_id": [f"Q{index}" for index in range(6)] * 2,
                           "truth": [0.11, 0.12, 0.13, 0.14, 0.15, 0.16] + [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]})
@@ -191,6 +370,10 @@ def test_first_rows_keep_the_first_queries_of_each_split() -> None:
     assert sorted(zip(kept["split"], kept["query_id"], kept["method"], strict=True)) == [
         ("a/one", "Q1", "m"), ("a/one", "Q1", "n"), ("a/one", "Q2", "m"), ("a/one", "Q2", "n"),
         ("a/two", "Q8", "m"), ("a/two", "Q8", "n"), ("a/two", "Q9", "m"), ("a/two", "Q9", "n")]
+    # The rest of each split is every query the first rows leave: one of the first split's, none of the second's.
+    rest = report.rest_rows(frame, 2)
+    assert sorted(zip(rest["split"], rest["query_id"], rest["method"], strict=True)) == [("a/one", "Q3", "m"), ("a/one", "Q3", "n")]
+    assert len(kept) + len(rest) == len(frame)
 
 
 def test_match_tables_count_answers_equal_to_the_published_value_beside_a_random_deal() -> None:

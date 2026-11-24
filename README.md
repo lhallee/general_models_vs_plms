@@ -3,10 +3,12 @@
 General-purpose language models can now read and write protein sequences, which raises the question of whether they
 can stand in for the protein language models that the field uses to predict what a mutation does. This repository
 holds an experiment that tests one sharp form of that question on the [FLIP2](https://flip.protein.properties/)
-benchmark, a second experiment that asks whether memory of the sequences explains the answer, and a dated survey of
-what others have reported. A general model that reads 256 labeled variants in its prompt matches the standard recipe
-of ridge regression on protein language model features and does not beat it, and the best predictor measured here
-averages the two.
+benchmark, a second that asks whether memory of the sequences explains the answer, a third that sets the general model
+against a generative protein language model tuned on the same variants, and a dated survey of what others have
+reported. A general model that reads 256 labeled variants in its prompt matches the standard recipe of ridge
+regression on protein language model features and does not beat it, a generative protein language model tuned on
+those variants falls short of both under the recipe set in advance and reaches their level, without passing it,
+under its best recipe, and the best predictor measured here averages the general model with the ridge.
 
 The [explainer](docs/index.html) walks through every experiment step by step for a reader outside the field, with a
 primer on each piece and one card per experiment, and it is a single HTML file with its figures inside that opens in
@@ -17,8 +19,9 @@ other public results are in [SURVEY.md](SURVEY.md), and the commands are in [REP
 
 Claude Mythos 5.2 was shown 256 labeled variants of a protein as plain text, with the protein unnamed, and was asked
 to rank 100 held-out variants. Ridge regression was fit on the same 256 rows with features from ESM-2 650M and from
-ESMC at three sizes, and every method was scored on the same queries. Each number below is a mean Spearman correlation
-with the measured values, and each interval is a 95% interval from 2,000 paired bootstrap draws of the queries.
+ESMC at three sizes, the generative protein language model ProGen2-small was tuned on them, and every method was
+scored on the same queries. Each number below is a mean Spearman correlation with the measured values, and each
+interval is a 95% interval from 2,000 paired bootstrap draws of the queries.
 
 ![Controls, ESMC, and Claude Mythos 5.2 on FLIP2 and on FGFR2](report/figures/mythos/tiers_both.png)
 
@@ -30,7 +33,11 @@ squares are ridges fit on the same 256 rows the model reads.*
 | 256 examples unless said, first 100 queries of each split | FLIP2, 16 splits | FGFR2 after the cutoff, 2 splits |
 |---|---|---|
 | Best control without a trained protein model (ridge on one-hot sequence) | 0.142 (0.097 to 0.182) | 0.295 (0.175 to 0.410) |
+| ProGen2-small score with no examples | 0.239 (0.188 to 0.286) | 0.412 (0.278 to 0.521) |
+| ProGen2-small tuned on the 256 rows with a preference loss (DPO), recipe set in advance | 0.263 (0.214 to 0.306) | 0.314 (0.187 to 0.429) |
+| ProGen2-small tuned, one setting for 20 epochs, picked after the first scores | 0.339 (0.290 to 0.379) | 0.342 (0.209 to 0.463) |
 | Best ESMC score with no examples (ESMC-6B) | 0.346 (0.298 to 0.388) | 0.481 (0.355 to 0.601) |
+| ProGen2-base tuned, the same one setting for 20 epochs | 0.360 (0.314 to 0.401) | 0.379 (0.241 to 0.499) |
 | Best ridge on ESMC features | 0.367 (0.319 to 0.409) | 0.572 (0.469 to 0.663) |
 | Claude Mythos 5.2 reading the 256 rows in its prompt | 0.380 (0.333 to 0.421) | 0.561 (0.458 to 0.646) |
 | Average of the model's ranking and a ridge's | 0.443 (0.399 to 0.482) | 0.611 (0.516 to 0.692) |
@@ -56,6 +63,58 @@ check added after the results were seen, the model scores 0.36 and the ridge 0.3
 FLIP2 was public before the model's training data end, so a good score there could come from memory of the benchmark.
 The same comparison was therefore repeated on an FGFR2 drug resistance screen that MaveDB published on 20 November
 2026, after that date, where the model scores 0.561 and the best ridge 0.572.
+
+### A generative protein language model tuned on the same rows reaches the level of both at its best recipe, and passes neither
+
+A ridge never changes its protein model, so a third experiment tried the recipe that changes every weight. For each
+split, ProGen2-small was tuned on the 256 rows with a preference loss (Direct Preference Optimization, DPO), which
+teaches the model to give a variant with a higher measured value a higher likelihood, and the tuned model then ranked
+the same 100 queries. Under the recipe set before the run, with the learning rate, the weight of the loss, and the
+epoch chosen on 51 of the 256 rows, it reaches 0.263 on FLIP2, which is -0.117 (-0.163 to -0.071) from Claude Mythos
+5.2 and -0.104 (-0.159 to -0.050) from the best ridge, and 0.314 on FGFR2, where it is behind both as well.
+
+That recipe understates the method by about 0.07. Runs added after those scores were seen show that the 51 rows
+choose a worse setting and stopping point than one setting run to a fixed length, so that setting (learning rate
+0.00001, weight 2, 20 epochs, nothing chosen) was scored on queries 101 to 300 of each split, which had no part in
+picking it. There ProGen2-small scores 0.324, +0.075 (+0.049 to +0.102) above the recipe set in advance and -0.026
+(-0.063 to +0.013) from the best ridge on those queries, and ProGen2-base, a model five times larger, scores 0.339,
+-0.012 (-0.048 to +0.025) from that ridge. On the first 100 queries ProGen2-base scores 0.360, -0.006 (-0.061 to
++0.043) from the best ridge and -0.020 (-0.067 to +0.026) from Claude Mythos 5.2. Every one of those intervals
+includes zero and none lies above it, so at its best recipe preference tuning is level with the ridge and with the
+general model on FLIP2 and beats neither. On the first 100 FGFR2 queries it stays behind both, at 0.379, -0.183
+(-0.334 to -0.037) from Claude Mythos 5.2.
+
+![ProGen2-small with no examples, under a ridge, and tuned, beside the best ridges and Claude Mythos 5.2](report/figures/mythos/preference_tuning.png)
+
+*Mean Spearman with 95% intervals, on the first 100 queries of each split. **A**, the 16 FLIP2 splits. **B**, the 2
+FGFR2 splits. Olive rows are ProGen2-small: its score with no examples (triangle), a ridge on its hidden states
+(circle), and the model tuned on the 256 rows with a Bradley-Terry loss (hollow hexagon) and with the ranked preference
+loss (filled hexagon). The gray row is the control, the same tuning on shuffled values. Green rows are the best
+ridges on ESMC features, and orange is Claude Mythos 5.2, whose interval is the shaded band.*
+
+![One setting for 40 epochs, on the held-out rows and on every query](report/figures/mythos/preference_long.png)
+
+*Mean Spearman over the 16 FLIP2 splits after each epoch of the one setting, for ProGen2-small. **A**, on the 51 rows
+held out from the examples. **B**, on every query of each split. The triangle is the released model, the hexagons
+are the two epochs read with nothing chosen, the green line and band are the best ridge on those queries, and the
+dotted line is the score under the recipe set in advance.*
+
+The held-out rows mislead because they are drawn like the examples and FLIP2's test queries are not. On those rows
+the tuning does what it is built to do, lifting the mean Spearman from 0.245 to 0.628 at the chosen checkpoint, and
+their score keeps rising with more epochs while the score on the test queries is level from about epoch 15. About
+half of the 0.07 comes from five splits on which the 51 rows chose another setting, and half from an earlier stop.
+The control explains the level of the first recipe: tuning on shuffled values lowers the released model's score by
+0.109, and tuning on the measured values scores 0.133 above that control.
+
+Four more changes were tried on ProGen2-small with the checkpoint still chosen on held-out rows. A learning rate ten
+times lower (0.205) and a low-rank update on frozen weights (0.200) score below the first recipe. Tuning on every
+labeled row of a split, up to 2,048, scores 0.344 on all queries, 0.088 above tuning on 256, and stays -0.065
+(-0.093 to -0.037) from the best ridge fit on the same rows. The ranks of the tuned model averaged with those of the
+best ridge or of Claude Mythos 5.2 tie the other method alone. On rows with no shift a ridge on the ESMC-600M
+embedding still leads (0.637 against 0.52 for the tuned model at a fixed recipe and 0.572 for a ridge on
+ProGen2-small's own hidden states), so part of what remains is the protein model and not the way it is fit. The
+fixed recipe was picked with the measured values of the first 100 queries of these splits, it ran under one batch
+order, and no ESMC model was tuned.
 
 ### The model learns from its examples and also uses what it knows about the protein
 
@@ -136,6 +195,9 @@ ridge on protein language model features fit on the same examples, which is the 
 | Baselines | Ridge regression on one-hot features, on the mean-pooled embedding of ESM-2 650M, ESMC-300M, ESMC-600M, and ESMC-6B, and on one-hot features with a model's zero-shot score, all fit on the same 256 rows, and the zero-shot scores alone |
 | Controls for the ridge | A random vector, amino acid composition, an untrained ESMC-300M, and trained ESMC given shuffled residues or scrambled positions |
 | Controls for the language model | Enciphered residues, reversed values, shuffled values, no examples, and the protein named |
+| Tuned protein language model | ProGen2-small, 151 million weights, with every weight tuned on 205 of the 256 rows by a ranked preference loss (Direct Preference Optimization, DPO) or a Bradley-Terry loss, and the learning rate, the weight of the loss, and the epoch chosen on the other 51 rows (73 and 51 on the one split with 124 rows) |
+| Controls for the tuning | The same model with no examples, a ridge on its hidden states, the same tuning on shuffled values, and two more batch orders |
+| Other scales of the tuning | One setting run for 20 and 40 epochs with nothing chosen, on ProGen2-small and on ProGen2-base (764 million weights), scored on every query; a learning rate ten times lower; a low-rank update; every labeled row of a split; and every baseline fit on the 205 tuning rows and scored on the 51 held-out rows |
 | Score | Spearman on each split, averaged over splits, with every comparison made on the same queries for both sides |
 
 Claude Mythos 5.2 was asked through fresh subagents of a coding agent, one per prompt, at the effort level chosen on
@@ -149,7 +211,11 @@ prompt, so the intervals cover the draw of queries and not the spread between tw
 route also puts a coding agent's instructions in front of every prompt, and the prompt controls ran on one split per
 dataset. The first 100 FGFR2 queries are easier than the rest for every method, with the best ridge at 0.45 on all 300,
 which makes 0.56 a score on those queries and not the level of the dataset. The test of sequence memory covers one
-dataset, and its 48 sequences detect only a correlation of about 0.4 or more.
+dataset, and its 48 sequences detect only a correlation of about 0.4 or more. The tuned protein language models are
+two generative models of one family. The recipe set in advance has three batch orders and a control, and the fixed
+recipe that reaches the ridge has one batch order, no control, and a setting picked with the measured values of the
+first 100 test queries, so its scores on those queries are optimistic and its scores on queries 101 to 300 are the
+ones to read. The result does not say what a tuned ESMC would score.
 
 ## Repository
 
@@ -169,5 +235,8 @@ dataset, and its 48 sequences detect only a correlation of about 0.4 or more.
 FLIP2 is the benchmark of Didi, Alamdari, Lu, Wittmann, Johnston, Amini, Madani, Czeneszew, Dallago, and Yang
 ([bioRxiv, February 2026](https://doi.org/10.64898/2026.02.23.707496)), and the FGFR2 screen is MaveDB score set
 `urn:mavedb:00001329-a-3` by Annika Maria Metzner with Sven Diederichs. The ridge on one-hot features with a zero-shot
-score follows Hsu, Nisonoff, Fannjiang, and Listgarten (Nature Biotechnology, 2022). Diego del Alamo proposed the
-comparison of in-context learning with ridge regression on FLIP2. Full references are in [SURVEY.md](SURVEY.md).
+score follows Hsu, Nisonoff, Fannjiang, and Listgarten (Nature Biotechnology, 2022). ProGen2 is the model of Nijkamp,
+Ruffolo, Weinstein, Naik, and Madani (Cell Systems, 2023), the ranked preference loss is that of Widatalla and
+colleagues as Yang and colleagues applied it to ProGen2, and the Bradley-Terry loss is that of Hawkins-Hooker and
+colleagues. Diego del Alamo proposed the comparison of in-context learning with ridge regression on FLIP2, and the
+comparison with preference tuning of ProGen2. Full references are in [SURVEY.md](SURVEY.md).

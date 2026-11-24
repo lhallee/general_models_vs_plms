@@ -44,6 +44,14 @@ CONTROL_RIDGES = tuple(f"ridge_{name}" for name in CONTROL_NAMES)
 TRIVIAL_METHODS = ("nearest_neighbor", "mutation_count", "stratum_mean")
 BASELINE_METHODS = (*RIDGE_METHODS, *ZERO_SHOT_METHODS, *CONTROL_RIDGES, *TRIVIAL_METHODS)
 CONTROL_ARMS = ("k256_cipher", "k256_described", "k0_described", "k256_shuffled", "k256_flipped", "klarge")
+# What a preference-tuned protein language model is read against, beside the best ridge of its group of splits.
+TUNED_REFERENCES = ("ridge_esmc_600m", "ridge_onehot_plus_esmc_6b", "ridge_onehot", "zero_shot_esmc_600m", "zero_shot_esmc_6b")
+# The arms of a tuned model that differ only in the order of their batches.
+ORDER_ARMS = ("dpo", "dpo_seed1", "dpo_seed2")
+# On the held-out rows a tuned model is read at these epochs of one setting, the learning rate and the weight of a
+# ratio that the reported arm chose on most splits, so that no row it is scored on chose the checkpoint.
+INSIDE_SETTING = (1e-5, 2.0)
+INSIDE_EPOCHS = (1, 2, 5, 10, 20)
 # A language model is compared on the queries it answered only where it answered at least this many of a split.
 MIN_ANSWERED = 30
 # An answer is near a published value if it is within this many units of the last digit the prompts show.
@@ -78,6 +86,12 @@ def load_predictions(tables: Path) -> pd.DataFrame:
 def first_rows(predictions: pd.DataFrame, count: int) -> pd.DataFrame:
     """Each split's first `count` queries in query order: the ones a route that asked one prompt a task was given."""
     kept = {(split, query) for split, rows in predictions.groupby("split") for query in sorted(rows["query_id"].unique())[:count]}
+    return predictions[[key in kept for key in zip(predictions["split"], predictions["query_id"], strict=True)]]
+
+
+def rest_rows(predictions: pd.DataFrame, count: int) -> pd.DataFrame:
+    """Each split's queries after its first `count` in query order: the ones a route that asked one prompt a task never read."""
+    kept = {(split, query) for split, rows in predictions.groupby("split") for query in sorted(rows["query_id"].unique())[count:]}
     return predictions[[key in kept for key in zip(predictions["split"], predictions["query_id"], strict=True)]]
 
 
@@ -528,6 +542,195 @@ def baseline_questions(scores: Scores) -> list[tuple[str, Series, Series]]:
             if left.method in scores.methods and right.method in scores.methods]
 
 
+def tuned_models(scores: Scores) -> list[str]:
+    """The preference-tuned protein language models that have a scored primary arm."""
+    return [model for model in plan.PREFERENCE_MODELS if f"{model}_dpo" in scores.methods]
+
+
+def tuned_arm_of(tuned: str) -> str:
+    """The arm of the tasks a tuned model or a variant of its tuning ran on."""
+    return plan.PREFERENCE_TASK_ARMS.get(tuned, "k256")
+
+
+def tuned_blends(predictions: pd.DataFrame, tuned: str, others: list[str]) -> list[pd.DataFrame]:
+    """The rank averages of a tuned model's primary arm with each of the other methods that the predictions hold."""
+    held = set(predictions["method"])
+    return [rank_average(predictions, f"{tuned}_dpo", other, f"{tuned}_dpo+{other}") for other in others if other in held]
+
+
+def tuned_orders(predictions: pd.DataFrame, tuned: str) -> pd.DataFrame:
+    """Rows of a method that averages the ranks of a tuned model's primary arm over its batch orders, within each task.
+
+    Empty unless every batch order ran. A task one of them missed is left out.
+    """
+    names = [f"{tuned}_{arm}" for arm in ORDER_ARMS]
+    keys = ["task_id", "query_id"]
+    rows = predictions[predictions["method"].isin(names)]
+    if set(rows["method"]) != set(names):
+        return predictions.iloc[:0]
+    ranks = rows.assign(rank=rows.groupby(["task_id", "method"])["prediction"].rank())
+    mean = ranks.groupby(keys)["rank"].agg(["mean", "size"]).reset_index()
+    mean = mean[mean["size"] == len(names)]  # the queries every order scored
+    merged = rows[rows["method"] == names[0]].merge(mean[[*keys, "mean"]], on=keys)
+    return merged.assign(prediction=merged["mean"], method=f"{tuned}_dpo+orders").drop(columns="mean")
+
+
+def tuned_questions(scores: Scores, models: list[str], best: str) -> list[tuple[str, Series, Series]]:
+    """Paired comparisons of a preference-tuned protein language model on the examples of its tasks.
+
+    Each tuned arm is set against the same model untuned, the same model under a ridge, the other loss, the same
+    loss on permuted values, the fitted baselines on the same examples, and each language model. A variant of the
+    tuning is also set against the primary arm of the first tuned model, and that arm's rank average with another
+    method against each of its two parts. The average of its batch orders is set against one order, the best ridge
+    and each language model.
+    """
+    asked = []
+    every = tuned_models(scores)
+    for tuned in every[:1]:
+        for blend in sorted(method for method in scores.methods if method.startswith(f"{tuned}_dpo+")):
+            asked += [("the rank average of a tuned model and another method against one alone", named(blend, "k256"), named(part, "k256"))
+                      for part in (f"{tuned}_dpo", blend.split("+", 1)[1])]
+        asked += [("the rank average of a tuned model's batch orders against a method on the same examples",
+                   named(f"{tuned}_dpo+orders", "k256"), named(other, "k256")) for other in (best, *models)]
+    for tuned in every:
+        rows = tuned_arm_of(tuned)
+        arm = {name: named(f"{tuned}_{name}", rows) for name in plan.PREFERENCE_ARMS}
+        if tuned != every[0]:
+            asked += [("a variant of the tuning, or another model, against the primary arm", arm[name], named(f"{every[0]}_dpo", "k256"))
+                      for name in ("dpo", "zero", "ridge")]
+            asked.append(("the same with no examples", arm["zero"], named(f"{every[0]}_zero", "k256")))
+            asked.append(("a variant of the tuning, or another model, against the first model with no examples",
+                          arm["dpo"], named(f"{every[0]}_zero", "k256")))
+        asked += [("preference tuning against the same model with no examples", arm[name], arm["zero"]) for name in ("dpo", "bt")]
+        asked += [("preference tuning against a ridge on the same model's hidden states", arm[name], arm["ridge"]) for name in ("dpo", "bt")]
+        asked.append(("the ranked preference loss against the Bradley-Terry loss", arm["dpo"], arm["bt"]))
+        asked.append(("preference tuning against the same loss on permuted values", arm["dpo"], arm["dpo_shuffled"]))
+        # Tuning on permuted values starts from a model whose score may already rank the queries, so its null is that
+        # score and not zero: permuted values can lower it and cannot raise it except by chance.
+        asked.append(("preference tuning on permuted values against the same model with no examples", arm["dpo_shuffled"], arm["zero"]))
+        asked += [("preference tuning under another batch order", arm["dpo"], arm[name]) for name in ("dpo_seed1", "dpo_seed2")]
+        asked.append(("a ridge on the model's hidden states against the same model with no examples", arm["ridge"], arm["zero"]))
+        for other in dict.fromkeys((best, *TUNED_REFERENCES)):
+            asked += [("a preference-tuned protein language model against a baseline on the same examples", arm[name], named(other, rows))
+                      for name in plan.PREFERENCE_ARMS]
+        # The tuned arm is the left side of every question, as it is in the split differences.
+        asked += [("a protein language model tuned on 256 examples against a language model that reads them in its prompt",
+                   arm[name], named(model, "k256")) for model in models for name in plan.PREFERENCE_ARMS]
+    return [(question, left, right) for question, left, right in asked
+            if left.method in scores.methods and right.method in scores.methods]
+
+
+def tuned_name(record: dict[str, object]) -> str:
+    """The model a tuning record's methods are named after: its checkpoint, or the named variant of its tuning."""
+    repository, _ = record["model"]
+    return record.get("method_prefix") or repository.rsplit("/", 1)[1].replace("-", "_")
+
+
+def tuning_table(records: list[dict[str, object]]) -> pd.DataFrame:
+    """Per tuned model, split and arm: the recipe and the epoch chosen on the held-out rows, and the score there.
+
+    `records` are the ones `preference_tuning` writes, one a split. An arm that failed has its reason and no recipe.
+    """
+    rows = []
+    for record in records:
+        shared = {"model": tuned_name(record), "revision": record["model"][1], "split": record["split"],
+                  "fit_rows": record["fit_rows"], "held_out_rows": record["held_out_rows"],
+                  "held_out_spearman_untuned": record["held_out_spearman_untuned"]}
+        for arm, found in record["arms"].items():
+            rows.append({**shared, "arm": arm, **found["recipe"], "epoch": found["epoch"],
+                         "held_out_spearman": found["held_out_spearman"], "seconds": found["seconds"], "failed": ""})
+        rows += [{**shared, "arm": arm, "failed": reason} for arm, reason in record["failed"].items()]
+    return pd.DataFrame(rows)
+
+
+def trace_table(records: list[dict[str, object]], predictions: pd.DataFrame) -> pd.DataFrame:
+    """Per tuned model, split, setting and epoch of a traced arm: the held-out Spearman and the Spearman on the queries.
+
+    `records` are the ones `preference_tuning --trace` writes, whose curves hold the scores of a task's leading
+    queries after every epoch; a record that traced no query is passed over. Their measured values come from the
+    scored `predictions`, in query order. `chosen` marks the checkpoint the held-out rows chose, the one a run
+    reports. Every other row can only say what another choice would have scored, since comparing rows reads the
+    measured values of the queries.
+    """
+    truths = predictions.drop_duplicates(["task_id", "query_id"]).sort_values("query_id")
+    rows = []
+    for record in records:
+        traced = record.get("traced_queries", 0)
+        if not traced:
+            continue
+        truth = truths.loc[truths["task_id"] == record["task_id"], "truth"].to_numpy()[:traced]  # (q_traced,)
+        assert len(truth) == traced, f"{record['task_id']} traced {traced} queries and the tables hold {len(truth)}"
+        for arm, found in record["arms"].items():
+            for curve in found["curves"]:
+                kept = all(curve[key] == found["recipe"][key] for key in ("learning_rate", "beta"))
+                for epoch, (held, scores) in enumerate(zip(curve["held_out_spearman"], curve["query_scores"], strict=True), start=1):
+                    rows.append({"model": tuned_name(record), "split": record["split"], "arm": arm,
+                                 "learning_rate": curve["learning_rate"], "beta": curve["beta"], "epoch": epoch,
+                                 "held_out_spearman": held, "spearman": spearman(truth, np.array(scores)), "queries": traced,
+                                 "chosen": kept and epoch == found["epoch"]})
+    return pd.DataFrame(rows)
+
+
+def inside_table(inside: list[dict[str, object]], records: list[dict[str, object]]) -> pd.DataFrame:
+    """Per split, every method's Spearman on the rows the tuning holds out for selection.
+
+    `inside` is what `preference_tuning --inside` writes: each baseline fit on the rows the tuning fits on. From the
+    tuning `records` come the same rows under a tuned model: untuned (`<model>_zero`), and after each epoch of each
+    setting of its ranked-loss arm, with `chosen` on the checkpoint the run kept. A record of another arm of the
+    tasks holds out other rows and is passed over.
+    """
+    rows = [{"split": found["split"], "method": method, "held_out_spearman": score, "chosen": False,
+             "fit_rows": found["fit_rows"], "held_out_rows": found["held_out_rows"]}
+            for found in inside for method, score in found["held_out_spearman"].items()]
+    for record in records:
+        if record.get("arm", "k256") != "k256" or "dpo" not in record["arms"]:
+            continue
+        shared = {"split": record["split"], "fit_rows": record["fit_rows"], "held_out_rows": record["held_out_rows"]}
+        name, found = tuned_name(record), record["arms"]["dpo"]
+        rows.append({**shared, "method": f"{name}_zero", "held_out_spearman": record["held_out_spearman_untuned"], "chosen": False})
+        for curve in found["curves"]:
+            kept = all(curve[key] == found["recipe"][key] for key in ("learning_rate", "beta"))
+            rows += [{**shared, "method": f"{name}_dpo", "learning_rate": curve["learning_rate"], "beta": curve["beta"], "epoch": epoch,
+                      "held_out_spearman": held, "chosen": kept and epoch == found["epoch"]}
+                     for epoch, held in enumerate(curve["held_out_spearman"], start=1)]
+    return pd.DataFrame(rows)
+
+
+def inside_differences(table: pd.DataFrame, groups: dict[str, list[str]]) -> pd.DataFrame:
+    """Over a group's splits, a tuned model on its held-out rows less each baseline fit on the rows it was tuned on.
+
+    The tuned model is taken untuned, after `INSIDE_EPOCHS` of the setting `INSIDE_SETTING`, which no row chose, and
+    at the checkpoint the held-out rows chose, whose score those rows inflate. The interval resamples the splits,
+    the same resamples for every row of a group: a run keeps its Spearman on the held-out rows and not its score of
+    each row, so the rows cannot be resampled.
+    """
+    tuned = table[table["method"].str.endswith("_dpo") & table["epoch"].notna()]
+    baselines = table[table["epoch"].isna() & ~table["method"].isin({f"{model}_zero" for model in plan.PREFERENCE_MODELS})]
+    wide = baselines.pivot(index="split", columns="method", values="held_out_spearman")  # (splits, baselines)
+    rows = []
+    for model, part in tuned.groupby(tuned["method"].str.removesuffix("_dpo")):
+        rate, beta = INSIDE_SETTING
+        fixed = part[np.isclose(part["learning_rate"], rate) & np.isclose(part["beta"], beta)]
+        untuned = table[table["method"] == f"{model}_zero"].set_index("split")["held_out_spearman"]
+        series = {"untuned": untuned, "chosen": part[part["chosen"]].set_index("split")["held_out_spearman"],
+                  **{f"epoch {epoch}": fixed[fixed["epoch"] == epoch].set_index("split")["held_out_spearman"] for epoch in INSIDE_EPOCHS}}
+        for group, splits in groups.items():
+            for label, scores in series.items():
+                for baseline in wide.columns:
+                    # A baseline that needs a parent sequence has no score on a split without one.
+                    shared = [split for split in splits if split in scores.index and split in wide.index and pd.notna(wide.at[split, baseline])]
+                    if not shared:
+                        continue
+                    draws = np.random.default_rng(name_code(group) % (2 ** 31)).integers(0, len(shared), size=(DRAWS, len(shared)))  # (r, n)
+                    gap = scores[shared].to_numpy() - wide.loc[shared, baseline].to_numpy()  # (n,)
+                    sampled = gap[draws].mean(axis=1)  # (r,)
+                    rows.append({"group": group, "model": model, "tuned": label, "baseline": baseline, "splits": len(shared),
+                                 "ahead": int((gap > 0).sum()), "tuned_mean": float(scores[shared].mean()),
+                                 "baseline_mean": float(wide.loc[shared, baseline].mean()), "difference": float(gap.mean()),
+                                 "low": float(np.quantile(sampled, 0.025)), "high": float(np.quantile(sampled, 0.975))})
+    return pd.DataFrame(rows)
+
+
 def paired_rows(scores: Scores, splits: list[str], asked: list[tuple[str, Series, Series]],
                 first_queries: int | None = None) -> list[dict[str, object]]:
     """The paired comparison of each question whose two series both ran on some split."""
@@ -556,10 +759,29 @@ def main() -> None:
     parser.add_argument("--tables", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--validation", type=Path, nargs="*", default=[], help="scored tables of the validation prompts")
+    parser.add_argument("--tuning", type=Path, help="the records.json of preference_tuning, for the table of chosen recipes")
+    parser.add_argument("--trace", type=Path, nargs="+",
+                        help="records.json files of preference_tuning runs that traced: write preference_trace.csv from them and nothing else")
+    parser.add_argument("--inside", type=Path, nargs="+",
+                        help="inside files of preference_tuning: with --tuning, write the two tables of the held-out rows and nothing else")
     args = parser.parse_args()
 
     args.out.mkdir(parents=True, exist_ok=True)
     predictions = load_predictions(args.tables)
+    if args.inside:
+        assert args.tuning is not None, "--inside needs the records of --tuning"
+        inside = [found for path in args.inside for found in json.loads(path.read_text(encoding="utf-8"))]
+        table = inside_table(inside, json.loads(args.tuning.read_text(encoding="utf-8")))
+        table.to_csv(args.out / "preference_inside.csv", index=False)
+        differences = inside_differences(table, group_splits(sorted(predictions["split"].unique())))
+        differences.to_csv(args.out / "preference_inside_differences.csv", index=False)
+        print(f"wrote the scores on the held-out rows to {args.out}")
+    if args.trace:
+        records = [record for path in args.trace for record in json.loads(path.read_text(encoding="utf-8"))]
+        trace_table(records, predictions).to_csv(args.out / "preference_trace.csv", index=False)
+        print(f"wrote the trace of every epoch to {args.out}")
+    if args.trace or args.inside:
+        return
     metrics = pd.read_csv(args.tables / "metrics.csv")
     calls = pd.read_csv(args.tables / "calls.csv")
     partial = partly_asked(calls, metrics)
@@ -583,18 +805,51 @@ def main() -> None:
     for model in models if partial else []:
         for ridge in sorted(set(best_first.values())):
             first.add(rank_average(first_predictions, model, ridge, f"{model}+{ridge}"))
+    # The primary tuned model's ranking averaged with its own untuned ranking, with a masked model's score, with the
+    # best ridges, and, on the first queries, with each language model: whether tuning holds something the other
+    # method does not.
+    for tuned in tuned_models(scores)[:1]:
+        partners = [f"{tuned}_zero", "zero_shot_esmc_600m"]
+        for blend in (*tuned_blends(seed_zero, tuned, [*partners, *sorted(set(best.values()))]), tuned_orders(seed_zero, tuned)):
+            scores.add(blend)
+        # Of the language models, only the ones asked one prompt a task are read on these queries.
+        asked_first = [model for model in models if (model, "k256") in partial]
+        blends = [*tuned_blends(first_predictions, tuned, [*partners, *sorted(set(best_first.values())), *asked_first]),
+                  tuned_orders(first_predictions, tuned)]
+        for blend in blends if partial else []:
+            first.add(blend)
+
+    # The queries after the first prompt's, for a tuned model whose recipe was picked on a trace of the first ones:
+    # no trace and no language model of the one-prompt route read them. Only the tuned models, the ridges, and the
+    # protein models' own scores are scored there.
+    rest_label = f"after the first {CHUNK_SIZE}"
+    beside_tuned = {*RIDGE_METHODS, *ZERO_SHOT_METHODS}
+    is_tuned = seed_zero["method"].str.startswith(tuple(f"{model}_" for model in plan.PREFERENCE_MODELS))
+    rest = Scores(rest_rows(seed_zero[is_tuned | seed_zero["method"].isin(beside_tuned)], CHUNK_SIZE)) if partial and is_tuned.any() else None
+    best_rest = {name: best_ridge(rest, splits) for name, splits in groups.items()} if rest is not None else {}
 
     paired_tables, differences, answered, partials = [], [], [], []
     chosen = list(dict.fromkeys((*best.values(), *best_first.values(), "ridge_esmc_600m", "ridge_onehot", "zero_shot_esmc_600m")))
+    for name, splits in groups.items() if rest is not None else []:
+        rows = paired_rows(rest, splits, tuned_questions(rest, [], best_rest[name]))
+        paired_tables.append(pd.DataFrame(rows).assign(group=name, queries=rest_label))
     # The benchmark's probe splits, one a dataset, are where such a route ran its controls: a group of their own.
     for name, splits in ({**groups, **({"probe": probes} if probes else {})} if partial else {}).items():
         ridge = best_first[name] if name in best_first else best_first["flip2"]
-        asked = questions(first, models, ridge) + baseline_questions(first)
+        asked = questions(first, models, ridge) + baseline_questions(first) + tuned_questions(first, models, ridge)
         rows = paired_rows(first, splits, asked, first_queries=CHUNK_SIZE)
         paired_tables.append(pd.DataFrame(rows).assign(group=name, queries=first_label))
     for name, splits in groups.items():
-        asked = questions(scores, models, best[name]) + baseline_questions(scores)
+        asked = questions(scores, models, best[name]) + baseline_questions(scores) + tuned_questions(scores, models, best[name])
         paired_tables.append(pd.DataFrame(paired_rows(scores, splits, asked)).assign(group=name, queries="all"))
+        # Split by split, a tuned model's primary arm against the best ridge and against each language model.
+        for tuned in tuned_models(scores):
+            primary_arm = named(f"{tuned}_dpo", tuned_arm_of(tuned))
+            for scope, held, ridges in (("all", scores, best), *([(first_label, first, best_first)] if partial else [])):
+                rows = split_differences(held, splits, primary_arm, named(ridges[name], tuned_arm_of(tuned)))
+                for model in models if scope != "all" or not partial else []:
+                    rows += split_differences(held, splits, primary_arm, named(model, "k256"))
+                differences += [{"group": name, "queries": scope, **row} for row in rows]
         for model in models:
             for other in chosen:
                 for scope, held in (("all", scores), *([(first_label, first)] if partial else [])):
@@ -620,9 +875,13 @@ def main() -> None:
                    means_table(every_seed, mean_groups).assign(seeds="every seed", queries="all")]
     if partial:
         mean_tables.append(means_table(first, mean_groups, CHUNK_SIZE).assign(seeds="seed 0", queries=first_label))
+    if rest is not None:
+        mean_tables.append(means_table(rest, groups).assign(seeds="seed 0", queries=rest_label))
     per_split = pd.concat([series_table(scores).assign(seeds="seed 0", queries="all"),
                            series_table(every_seed).assign(seeds="every seed", queries="all"),
-                           *([series_table(first).assign(seeds="seed 0", queries=first_label)] if partial else [])], ignore_index=True)
+                           *([series_table(first).assign(seeds="seed 0", queries=first_label)] if partial else []),
+                           *([series_table(rest).assign(seeds="seed 0", queries=rest_label)] if rest is not None else [])],
+                          ignore_index=True)
     first_seed = metrics[(metrics["seed"] == 0) & ~pd.MultiIndex.from_frame(metrics[["method", "arm"]]).isin(partial)]
     first_seed = first_seed.assign(group=np.where(first_seed["split"].str.startswith(POSTCUTOFF_DATASET), "postcutoff", "flip2"))
     metric_means = first_seed.groupby(["group", "arm", "method"]).agg(
@@ -649,13 +908,17 @@ def main() -> None:
     effort_table(calls, mean_groups).to_csv(args.out / "effort.csv", index=False)
     if args.validation:
         validation_table(args.validation).to_csv(args.out / "effort_validation.csv", index=False)
+    if args.tuning:
+        records = json.loads(args.tuning.read_text(encoding="utf-8"))
+        tuning_table(records).to_csv(args.out / "preference_tuning.csv", index=False)
     calibration(seed_zero, "k256").to_csv(args.out / "calibration_k256.csv", index=False)
     chunk_drift(seed_zero, "k256").to_csv(args.out / "chunk_drift_k256.csv", index=False)
     completeness(calls, metrics).to_csv(args.out / "completeness.csv", index=False)
     refusal_table(calls).to_csv(args.out / "refusals.csv", index=False)
     cost_table(calls).to_csv(args.out / "cost.csv", index=False)
-    found = {"groups": mean_groups, "match_groups": matched_groups, "language_models": models, "best_ridge_at_k256": best,
-             "best_ridge_first": best_first, "draws": DRAWS,
+    found = {"groups": mean_groups, "match_groups": matched_groups, "language_models": models,
+             "tuned_models": tuned_models(scores), "best_ridge_at_k256": best,
+             "best_ridge_first": best_first, "best_ridge_rest": best_rest, "rest_queries": rest_label, "draws": DRAWS,
              "partly_asked": sorted(f"{method} {arm}" for method, arm in partial), "partly_asked_queries": CHUNK_SIZE,
              "min_answered": MIN_ANSWERED}
     (args.out / "findings.json").write_text(json.dumps(found, indent=1), encoding="utf-8")

@@ -57,6 +57,19 @@ ridge on protein language model features fit on the same examples. That is the c
   publication.
 - **Ridge on one-hot features with a zero-shot score.** Chloe Hsu, Hunter Nisonoff, Clara Fannjiang, and Jennifer
   Listgarten. Learning protein fitness models from evolutionary and assay-labeled data. Nature Biotechnology, 2022.
+- **The comparison with a tuned protein language model.** Diego del Alamo asked on 23 November 2026 for a comparison
+  with Direct Preference Optimization (DPO) on ProGen2.
+- **ProGen2.** Erik Nijkamp, Jeffrey A. Ruffolo, Eli N. Weinstein, Nikhil Naik, and Ali Madani. ProGen2: Exploring the
+  boundaries of protein language models. Cell Systems, 2023, [arXiv 2206.13517](https://arxiv.org/abs/2206.13517). The
+  weights are read from the mirror `hugohrban/progen2-small` on the Hugging Face Hub (BSD-3-Clause), pinned by
+  revision and checked against the reference score of the authors' own scorer.
+- **Preference tuning.** The ranked preference loss with a frozen reference model is that of Widatalla and colleagues,
+  Aligning protein generative models with experimental fitness via Direct Preference Optimization, bioRxiv
+  [10.1101/2024.05.20.595026](https://doi.org/10.1101/2024.05.20.595026), as Yang and colleagues applied it to
+  ProGen2-small in Steering Generative Models with Experimental Data for Protein Fitness Optimization,
+  [arXiv 2505.15093](https://arxiv.org/abs/2505.15093). The Bradley-Terry loss on likelihood differences is that of
+  Hawkins-Hooker and colleagues, Likelihood-based fine-tuning of protein language models for few-shot fitness
+  prediction and design, bioRxiv [10.1101/2024.05.28.596156](https://doi.org/10.1101/2024.05.28.596156).
 
 ## Not read
 

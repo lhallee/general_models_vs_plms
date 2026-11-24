@@ -23,6 +23,18 @@ ALL_SPLITS = (*flip2.SPLITS, *postcutoff.SPLITS)
 # One split per dataset, for the controls and probes of a route too costly to ask on every split.
 PROBE_SPLITS = ("amylase/by_mutation", "hydro/three_to_many", "ired/two_to_many", "nucb/two_to_many", "pdz3/single_to_double",
                 "rhomax/by_wild_type", "trpb/two_to_many", "fgfr2/random")
+# Preference tuning of a generative protein language model on a task's rows: the models, and the arm each method
+# name ends in (`progen2_small_dpo`). `zero` is the untuned score, `ridge` a ridge on the untuned hidden states, `dpo`
+# the ranked preference loss, `bt` the Bradley-Terry loss, and `dpo_shuffled` the ranked loss on permuted values.
+# A model name with a third word is a variant of that model's tuning that changes one thing: `slow` a lower
+# learning rate, `lowrank` a low-rank update of frozen weights, `rows` the largest example sets, and `long` one
+# setting alone, run for 40 epochs on ProGen2-small and for 20 on ProGen2-base. `long20` and `long40` are that run
+# after a fixed number of epochs, with no checkpoint chosen.
+PREFERENCE_MODELS = ("progen2_small", "progen2_base", "progen2_small_slow", "progen2_small_lowrank", "progen2_small_rows",
+                     "progen2_small_long", "progen2_small_long20", "progen2_small_long40", "progen2_base_long", "progen2_base_long20")
+# The arm of the tasks a variant of the tuning runs on, where it is not the 256 examples of the others.
+PREFERENCE_TASK_ARMS = {"progen2_small_rows": "klarge"}
+PREFERENCE_ARMS = ("zero", "ridge", "dpo", "bt", "dpo_shuffled", "dpo_seed1", "dpo_seed2")
 # The effort levels a subagent can be given, lowest first, and how close to the best a lower level must score to be chosen.
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
 EFFORT_TOLERANCE = 0.02

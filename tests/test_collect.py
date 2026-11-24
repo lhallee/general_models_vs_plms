@@ -115,6 +115,40 @@ def test_collect_leaves_out_a_task_cut_short_and_keeps_the_subagent_arm_that_ask
     assert len(pd.read_csv(out / "calls.csv")) == 2
 
 
+def test_added_methods_are_scored_beside_the_rows_already_there_and_replace_none(tmp_path: Path) -> None:
+    generator = np.random.default_rng(4)
+    truth = generator.normal(size=30)
+    queries = [f"Q{index + 1:03d}" for index in range(30)]
+    # The scored rows are stored out of query order, as nothing promises an order within a task.
+    scored = pd.DataFrame({"task_id": "a-one__k256__s0", "method": "ridge_onehot", "query_id": queries, "row": np.arange(30),
+                           "stratum": "1", "truth": truth, "prediction": generator.normal(size=30), "answered": True}).iloc[::-1]
+    tables, out = tmp_path / "tables", tmp_path / "out"
+    tables.mkdir()
+    scored.to_csv(tables / "predictions.csv.gz", index=False)
+    pd.DataFrame([{"task_id": "a-one__k256__s0", "split": "a/one", "arm": "k256", "seed": 0, "k": 256, "decimals": 2,
+                   "method": "ridge_onehot", "queries": 30, "answered_fraction": 1.0, "spearman": 0.1}]).to_csv(tables / "metrics.csv", index=False)
+    (tables / "calls.csv").write_text("record_id\n", encoding="utf-8")
+    (tables / "incomplete_tasks.txt").write_text("", encoding="utf-8")
+
+    collect.add_methods(tables, {"a-one__k256__s0": {"progen2_small_dpo": truth.tolist(), "progen2_small_zero": (-truth).tolist()}}, out)
+
+    predictions = pd.read_csv(out / "predictions.csv.gz", dtype={"stratum": str})
+    metrics = pd.read_csv(out / "metrics.csv").set_index("method")
+    assert len(predictions) == 90 and (out / "calls.csv").exists() and (out / "incomplete_tasks.txt").exists()
+    added = predictions[predictions["method"] == "progen2_small_dpo"].sort_values("query_id")
+    assert added["prediction"].tolist() == pytest.approx(truth.tolist()) and added["truth"].tolist() == pytest.approx(truth.tolist())
+    assert added["row"].tolist() == list(range(30)) and added["answered"].all()
+    assert metrics.loc["progen2_small_dpo", "spearman"] == pytest.approx(1.0)
+    assert metrics.loc["progen2_small_zero", "spearman"] == pytest.approx(-1.0)
+    assert metrics.loc["ridge_onehot", "spearman"] == pytest.approx(0.1)
+    keys = metrics.loc["progen2_small_dpo"]
+    assert (keys["split"], keys["arm"], int(keys["seed"]), int(keys["k"]), int(keys["queries"])) == ("a/one", "k256", 0, 256, 30)
+    with pytest.raises(AssertionError, match="already scored"):
+        collect.add_methods(out, {"a-one__k256__s0": {"progen2_small_dpo": truth.tolist()}}, tmp_path / "again")
+    with pytest.raises(AssertionError, match="29 predictions for the 30 queries"):
+        collect.add_methods(tables, {"a-one__k256__s0": {"progen2_small_bt": truth[:29].tolist()}}, tmp_path / "short")
+
+
 def test_recognition_question_shows_unnamed_rows_once_per_dataset(tmp_path: Path) -> None:
     data_folder, tasks, out = (tmp_path / name for name in ("data", "tasks", "out"))
     write_toy_split(data_folder)

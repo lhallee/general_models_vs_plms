@@ -57,3 +57,57 @@ python -m general_models_vs_plms.knowledge_report --set prompts/k/sequences.json
 
 `rhomax_predictions.csv` holds the Rhomax rows of the in-context experiment's scored predictions that the report
 reads. `sequence_knowledge select` draws the set from the splits and those predictions.
+
+The preference-tuning experiment runs on the GPU machine from the tasks the first experiment wrote, and its scores
+are joined onto that experiment's scored tables.
+
+```bash
+bash box.sh prefer check small                    # load ProGen2-small and compare it with its authors' reference score
+bash box.sh prefer chain small 5                  # two splits, a projection of the rest, then every split within 5 hours
+python -m general_models_vs_plms.collect --tables <tables> --add <state>/prefer/methods.json --out <new tables>
+python -m general_models_vs_plms.report --tables <new tables> --out <summary> --tuning <state>/prefer/records.json
+python -m general_models_vs_plms.figures --summary <summary> --out figures/mythos \
+    --primary claude-mythos-5-2@harness-low --only preference_tuning preference_by_split
+```
+
+`prefer` waits for a GPU with no other client before it starts, and `preference_tuning.py` holds every setting of the
+tuning: the checkpoints and their revisions, the two losses, the grid, and the rows held out for selection.
+
+The trace repeats the ranked-loss arm and scores the first 100 queries after every epoch, so that every setting and
+epoch can be compared on the test queries. That comparison reads their measured values, which the choice of a
+checkpoint never does, so the trace is a diagnostic and no reported score comes from it.
+
+```bash
+bash box.sh prefer trace small 2                  # the same chain, the ranked-loss arm alone, into <state>/prefer_trace
+python -m general_models_vs_plms.report --tables <new tables> --out <summary> \
+    --trace <state>/prefer_trace/records.json <state>/prefer/records.json
+python -m general_models_vs_plms.figures --summary <summary> --out figures/mythos \
+    --primary claude-mythos-5-2@harness-low --only preference_trace
+```
+
+The runs added after the reported scores were seen use the same chain. Each writes its methods under a name of its
+own into `<state>/prefer`, so the `collect` and `report` commands above take them in with the reported run.
+
+```bash
+bash box.sh prefer short base 2.4                 # ProGen2-base: no examples, the ridge, and the ranked loss at 0.00001
+bash box.sh prefer chain small 1.2 long           # one setting for 40 epochs, every query scored after every epoch
+bash box.sh prefer night small 1100               # three variants of the tuning of ProGen2-small, none started after 11:00 UTC
+bash box.sh prefer chain base 1.5 fixed           # the same one setting on ProGen2-base for 20 epochs
+python -m general_models_vs_plms.figures --summary <summary> --out figures/mythos \
+    --primary claude-mythos-5-2@harness-low --only preference_long preference_scale
+```
+
+The three variants are a learning rate of 0.000001 (`slow`), a low-rank update with every released weight frozen
+(`lowrank`), and tuning on every labeled row of a split in place of 256 (`rows`). The `long` run is scored three
+ways: after 20 epochs and after 40 epochs with no checkpoint chosen (`long20`, `long40`), and at the checkpoint its
+held-out rows choose (`long`). Its records go to `report --trace` with the two files above.
+
+The baselines on the rows the tuning holds out need the features the first experiment stored and no GPU.
+
+```bash
+bash box.sh prefer inside small                   # each baseline fit on the tuning rows, scored on the held-out rows
+bash box.sh prefer states                         # the same for a ridge on the hidden states of each ProGen2 model
+python -m general_models_vs_plms.report --tables <new tables> --out <summary> \
+    --tuning <state>/prefer/records.json \
+    --inside <state>/prefer/inside.json <state>/prefer/inside_small.json <state>/prefer/inside_base.json
+```
