@@ -4,28 +4,33 @@ A **confounder-audited compilation of generalized LLM results in protein biology
 benchmarks against protein language models (pLMs)**, organized so both humans and agents can inspect what general-purpose
 language models can currently do strictly where the evidence is rigorous.
 
-- **Jump straight to our controlled experiments:** [What we found](#what-we-found), the standalone interactive
-  [Experiment Explainer](docs/index.html), [RESULTS.md](RESULTS.md), and the
+- **Explore live in your browser (GitHub Pages):**
+  - **[Experiment Explainer](https://lhallee.github.io/general_models_vs_plms/)** (`docs/index.html`, step-by-step interactive walkthrough of our controlled experiments)
+  - **[32-Study Compilation & Confounder Explorer](https://lhallee.github.io/general_models_vs_plms/compilation.html)** (`docs/compilation.html`, filterable claims, 8-axis confounder matrix, and full study dossiers)
+- **Jump straight to our controlled experiments:** [What we found](#what-we-found), [RESULTS.md](RESULTS.md), and the
   [Expanded Post-Cutoff MaveDB Suite](POSTCUTOFF_BENCHMARK.md) (`FGFR2`, `GBA1`, `ARAF`).
-- **Explore the full 31-study literature & X compilation:** Open the offline interactive
-  [Compilation & Confounder Explorer](docs/compilation.html), read [COMPILATION.md](COMPILATION.md) /
-  [SURVEY.md](SURVEY.md), or query the structured index directly via
-  `python -m general_models_vs_plms.catalog query --rigorous-only` (`catalog/index.json`, `catalog/claims.csv`,
+- **Query the structured literature & X compilation:** Read [COMPILATION.md](COMPILATION.md) / [SURVEY.md](SURVEY.md),
+  or run `python -m general_models_vs_plms.catalog query --rigorous-only` (`catalog/index.json`, `catalog/claims.csv`,
   `catalog/studies.jsonl`, and per-study dossiers under `studies/`).
 
 > **Headline across our controlled experiments (updated 2026-11-25):** On the 16 FLIP2 splits (256 labeled variants),
-> Claude Mythos 5.2 in context (`0.380`) ties standard mean-pooled ESMC ridge (`0.367`) and ProGen2 preference tuning
-> (`0.360`–`0.378`), **but replacing global mean pooling with mutation-site local hidden-state pooling plus zero-shot
-> scores breaks the tie decisively in favor of pure frozen pLMs**: frozen ESMC-600M + ESMC-6B reaches **`0.457`**
-> (**+0.077 strictly above Claude Mythos 5.2**, 95% CI `+0.028` to `+0.124`), while averaging Claude Mythos 5.2 with
-> mutation-site ESMC-600M raises the hybrid ceiling to **`0.467`** (`+0.087` over Mythos 5.2 alone). Across 6 new
-> post-June-2026 MaveDB splits (`GBA1` hydrolase, `ARAF` kinase activity & abundance), stacked ESMC-6B reaches **`0.549`**
-> (+0.088 over prior post-cutoff baselines), and ConFit-style KL-anchored LoRA ESMC gains +0.053 to +0.065 over zero-shot
-> on single-site DMS (`0.512`–`0.516`) while trailing frozen local/stacked ridges under FLIP2's heavier extrapolation shift.
+> Claude Mythos 5.2 in context (`0.380`) ties standard final-layer mean-pooled ESMC ridge (`0.367`) and ProGen2
+> preference tuning (`0.360`–`0.378`), **but better ESMC featurization breaks the tie decisively in favor of pure frozen
+> pLMs**: a single frozen ESMC-600M model stacked with canonical depth layer 27 (or penultimate layer 35) plus the
+> released ESMFold2 width-256 structural stream reaches **`0.443`–`0.444`** (`+0.063`–`+0.064` strictly above Mythos 5.2),
+> and pure frozen ESMC-600M + ESMC-6B reaches **`0.457`** (`+0.077` `[+0.028, +0.124]` above Mythos 5.2), while averaging
+> Claude Mythos 5.2 with mutation-site ESMC-600M reaches **`0.467`**. Across our post-June-2026 MaveDB suites (all 300
+> queries), **canonical intermediate depth layers (23/27/60) + the ESMFold2 structural stream** lift `GBA1`/`ARAF` (6
+> splits) to **`0.586`** (single 6B **`0.578`**, `+0.028` strictly above final-layer stacked 6B and `+0.118` over prior
+> baselines) and `FGFR2` (2 splits) to **`0.491`** (vs `0.449` prior ridge / `0.425` Claude Fable 5.2). Independently,
+> **ESMC-6B's penultimate layer (`-2`, L79)** strictly beats final-layer pooled features on every benchmark (`+0.033`
+> FLIP2 q300, `+0.077` FGFR2 q300, `+0.037` `GBA1`/`ARAF` q300).
 
-Every table and figure from our first three experiments is in [RESULTS.md](RESULTS.md), the interactive walkthrough is in
-[docs/index.html](docs/index.html), the interactive literature audit is in [docs/compilation.html](docs/compilation.html),
-and reproduction commands are in [REPRODUCE.md](REPRODUCE.md).
+Every table and figure from our first three experiments is in [RESULTS.md](RESULTS.md), the live interactive walkthrough
+is at [lhallee.github.io/general_models_vs_plms](https://lhallee.github.io/general_models_vs_plms/) (`docs/index.html`),
+the live literature audit is at
+[lhallee.github.io/general_models_vs_plms/compilation.html](https://lhallee.github.io/general_models_vs_plms/compilation.html)
+(`docs/compilation.html`), and reproduction commands are in [REPRODUCE.md](REPRODUCE.md).
 
 ## What we found
 
@@ -53,9 +58,11 @@ squares are ridges fit on the same 256 rows the model reads.*
 | Best ridge on mean-pooled ESMC features | 0.367 (0.319 to 0.409) | 0.572 (0.469 to 0.663) |
 | Claude Mythos 5.2 reading the 256 rows in its prompt | 0.380 (0.333 to 0.421) | 0.561 (0.458 to 0.646) |
 | Frozen ESMC-600M mutation-site local pooling + zero-shot ridge (single 600M pLM) | **0.429** (0.382 to 0.469) | 0.431 (0.305 to 0.543) |
-| **Pure frozen pLM: ESMC-600M + ESMC-6B mutation-site + zero-shot rank average** | **0.457** (0.410 to 0.496) | 0.496 (stacked, q300: **0.453**) |
+| **Single frozen ESMC-600M depth (L27) or penultimate (L35) + ESMFold2 structural stream** | **0.443 / 0.444** (0.395 to 0.484) | **0.505** (q300: **0.469**) |
+| **Pure frozen pLM: ESMC-600M + ESMC-6B depth (L27/L60) + structural stream stacked** | **0.446** (0.400 to 0.484) | **0.529** (q300: **0.487**; all-3: **0.491**) |
+| **Pure frozen pLM: ESMC-600M + ESMC-6B mutation-site + zero-shot rank average** | **0.457** (0.410 to 0.496) | 0.496 (stacked, q300: 0.453) |
 | Average of Claude Mythos 5.2 and old mean-pooled ESMC ridge | 0.443 (0.399 to 0.482) | 0.611 (0.516 to 0.692) |
-| **Average of Claude Mythos 5.2 and mutation-site ESMC-600M ridge** | **0.467** (0.422 to 0.505) | 0.571 (stacked 6B) |
+| **Average of Claude Mythos 5.2 and mutation-site ESMC-600M ridge** | **0.467** (0.422 to 0.505) | 0.605 (Mythos + depth+struct 6B) |
 
 The best ridge is the one on the ESMC-600M embedding for FLIP2 and the one on one-hot features with the ESMC-6B score
 for FGFR2, and the average in the last row pairs the model with that same ridge.
@@ -205,6 +212,40 @@ identity <= 12.5% and <= 16.7% to FLIP2; pre-cutoff `PRKN` audited and excluded)
   and is invariant to residue enciphering on post-cutoff `fgfr2/random` (`+0.404` plain vs `+0.406` cipher), cleanly
   isolating the ~+0.25–0.30 protein prior that frontier Claude Mythos 5.2 adds on top of tabular ICL.
 
+### Intermediate ESMC layers (23/27/60) + structural stream and penultimate layer (-2) ablation
+
+A fifth experiment (`2026-11-25_esmc_layers_and_structure`) re-extracted all three ESMC scales (`300M`, `600M`, `6B`)
+across all 24 splits (16 FLIP2, 2 post-cutoff `FGFR2`, 6 post-cutoff `GBA1`/`ARAF`) using exact canonical FastPLMs taps
+(depth layers `23`/`27`/`60`, penultimate layer `-2` at `29`/`35`/`79`, final layer `-1`, and the released ESMFold2
+width-256 structural stream in one BF16 pass per batch, fixing two-chain `pdz3` concatenation):
+
+| ESMC representation (256 context rows) | FLIP2 q100 (16) | FLIP2 q300 (16) | FGFR2 q100 (2) | FGFR2 q300 (2) | GBA1+ARAF q300 (6) |
+|---|---:|---:|---:|---:|---:|
+| Prior final-layer mean-pool (`ridge_esmc_600m` / `esmc_6b`) | 0.367 / 0.352 | 0.355 / 0.344 | 0.397 / 0.359 | 0.385 / 0.338 | 0.489 / 0.500 |
+| **ESMC-6B penultimate L79 pooled (`penult_mv`, no struct/ZS)** | **0.379** | **0.383** | **0.513** | **0.405** | **0.530** |
+| **ESMFold2 256-d structural stream alone (`struct_mv`, 600M / 6B)** | **0.381** / 0.336 | 0.363 / 0.351 | 0.435 / 0.414 | 0.414 / 0.395 | 0.491 / **0.533** |
+| Final-layer stacked (`600M` / `6B`) | 0.422 / 0.405 | 0.407 / 0.389 | 0.442 / 0.483 | 0.423 / 0.427 | 0.538 / 0.550 |
+| **Penultimate (-2) stacked (`600M` L35 / `6B` L79, no struct)** | 0.410 / 0.411 | 0.399 / 0.406 | 0.470 / **0.543** | 0.432 / 0.447 | 0.552 / 0.556 |
+| **Depth (L27/L60) + structural stream stacked (`600M` / `6B`)** | **0.443** / 0.396 | **0.425** / 0.401 | **0.505** / 0.476 | **0.469** / 0.452 | **0.560** / **0.578** |
+| **Penultimate + structural stream stacked (`600M` / `6B`)** | **0.444** / 0.404 | **0.426** / 0.403 | 0.472 / 0.524 | 0.454 / 0.450 | 0.557 / 0.566 |
+| **Ensemble `600M+6B`: Depth (L27/L60) + structural stacked** | **0.446** | **0.435** | **0.529** | **0.487** (all-3: **0.491**) | **0.586** |
+
+- **Intermediate depth layers (`23`/`27`/`60`) + ESMFold2 structural stream set new post-cutoff and single-model FLIP2 records:**
+  Depth hidden states alone drop sharply on variant regression (`0.212`–`0.359`), while the 256-d structural stream alone
+  strictly beats 2,560-d final-layer ESMC-6B on `GBA1`/`ARAF` (`0.533` vs `0.493`, `+0.040` `[+0.013, +0.067]`) and beats
+  final-layer ESMC-600M on every panel. Combining depth + structural stream lifts `GBA1`/`ARAF` to **`0.586`** (`600M+6B`;
+  single 6B **`0.578`**, `+0.028` `[+0.004, +0.052]` strictly above final-layer stacked 6B), lifts `FGFR2` q300 to
+  **`0.487`**–**`0.491`** (single 600M `0.469`, `+0.046` `[+0.004, +0.087]` strictly above final-layer stacked), and lifts
+  a **single 600M model** on FLIP2 to **`0.443`** (`+0.063` `[+0.020, +0.104]` strictly above Claude Mythos 5.2 `0.380`),
+  driven by large gains on structural stability transfer (`hydro/to_P06241`: `0.345 -> 0.696`, `hydro/to_P01053`:
+  `0.212 -> 0.588`), `araf_activity/by_position` (`0.563 -> 0.662`), and `araf_abundance/by_position` (`0.327 -> 0.395`).
+- **Penultimate layer (`-2`) independently beats final layer everywhere on ESMC-6B and on all post-cutoff suites:**
+  With zero structural features and zero zero-shot scores, pooled `penult_mv` from ESMC-6B (`L79`) strictly beats final-layer
+  pooled ESMC-6B on FLIP2 q300 (`0.383` vs `0.350`, `+0.033` `[+0.013, +0.054]`), FGFR2 q300 (`0.405` vs `0.328`, `+0.077`
+  `[+0.018, +0.135]`), and `GBA1`/`ARAF` q300 (`0.530` vs `0.493`, `+0.037` `[+0.009, +0.063]`). Combining penultimate +
+  structural stream reaches `0.444` (FLIP2 q100 single 600M) and `0.566` (`GBA1`/`ARAF` single 6B). Shuffled-label controls
+  stay near zero (`-0.020` to `+0.041` on FLIP2 q100; `-0.075` to `+0.016` on `GBA1`/`ARAF`).
+
 ### Through the public API, Claude Fable 5.2 also ties its best ridge
 
 A separate experiment asked four Claude models through the public API and scored all 300 queries of each split, so its
@@ -213,16 +254,18 @@ numbers are compared only with baselines scored on those queries and are never s
 Claude Opus 5.5 (0.252), and Claude Haiku 5.5 (0.176) are below that ridge, and Claude Opus 5.5 refused 68 of its 265
 prompts at low effort.
 
-## What the field has found (31-study confounder-audited compilation)
+## What the field has found (32-study confounder-audited compilation)
 
-As of 25 November 2026, we maintain a structured, machine-queryable compilation of **31 studies** across peer-reviewed
+As of 25 November 2026, we maintain a structured, machine-queryable compilation of **32 studies** across peer-reviewed
 papers, arXiv/bioRxiv preprints, technical reports, primary GitHub benchmarks, X threads, and our own experiments
-(**25 audited from full text / primary data** across 8 explicit confounder and leakage axes; **6 queued unread** and
-strictly excluded from critiques; **59 indexed claims: 31 supported/controlled, 15 suggestive/confounded, 7 unverified or
+(**26 audited from full text / primary data** across 8 explicit confounder and leakage axes; **6 queued unread** and
+strictly excluded from critiques; **62 indexed claims: 34 supported/controlled, 15 suggestive/confounded, 7 unverified or
 likely leaked**).
 
-- **Interactive web explorer (offline):** [docs/compilation.html](docs/compilation.html) (filter by task, evaluation
-  regime, evidence strength, source tier, model, and clickable 8-axis confounder matrix).
+- **Live interactive web explorer (GitHub Pages):**
+  [lhallee.github.io/general_models_vs_plms/compilation.html](https://lhallee.github.io/general_models_vs_plms/compilation.html)
+  (offline copy: [docs/compilation.html](docs/compilation.html); filter by task, evaluation regime, evidence strength,
+  source tier, model, and clickable 8-axis confounder matrix).
 - **Full compiled report & per-study dossiers:** [COMPILATION.md](COMPILATION.md), [SURVEY.md](SURVEY.md), and
   `studies/<study_id>.md`.
 - **Agent / script interface:** `catalog/index.json`, `catalog/claims.csv`, `catalog/studies.jsonl`, or
@@ -300,16 +343,16 @@ does not say what a tuned ESMC would score.
 
 | Path | What it holds |
 |---|---|
-| [docs/compilation.html](docs/compilation.html) | Interactive confounder-audited compilation explorer (offline HTML) |
-| [docs/index.html](docs/index.html) | Interactive explainer for our controlled experiments (offline HTML) |
-| [COMPILATION.md](COMPILATION.md) / [SURVEY.md](SURVEY.md) | Full 31-study confounder-audited report and 8-axis audit matrix |
+| [docs/compilation.html](https://lhallee.github.io/general_models_vs_plms/compilation.html) | Live interactive confounder-audited compilation explorer (GitHub Pages & offline HTML) |
+| [docs/index.html](https://lhallee.github.io/general_models_vs_plms/) | Live interactive explainer for our controlled experiments (GitHub Pages & offline HTML) |
+| [COMPILATION.md](COMPILATION.md) / [SURVEY.md](SURVEY.md) | Full 32-study confounder-audited report and 8-axis audit matrix |
 | [POSTCUTOFF_BENCHMARK.md](POSTCUTOFF_BENCHMARK.md) | Homology-audited post-June-2026 MaveDB suite (`FGFR2`, `GBA1`, `ARAF`) and zero-spend model horizon |
-| `catalog/`, `studies/` | Machine-queryable JSON/JSONL/CSV study & claim catalog and 31 per-study dossiers |
+| `catalog/`, `studies/` | Machine-queryable JSON/JSONL/CSV study & claim catalog and 32 per-study dossiers |
 | [RESULTS.md](RESULTS.md) | Every table and figure from our FLIP2, sequence-knowledge, and ProGen2 experiments |
 | [REPRODUCE.md](REPRODUCE.md) | The commands for the tables, the figures, and the experiments |
 | `report/figures/`, `report/tables/` | The figures, and the summary tables they are drawn from |
 | [prompts/](prompts/README.md) | Every prompt Claude Mythos 5.2 was asked, as the file it read, with its answer |
-| `general_models_vs_plms/`, `scripts/`, `tests/` | The package (including `catalog.py`, `postcutoff_suite.py`, `esmc_adaptation.py`, `open_llm_eval.py`) and test suite |
+| `general_models_vs_plms/`, `scripts/`, `tests/` | The package (including `catalog.py`, `postcutoff_suite.py`, `esmc_adaptation.py`, `esmc_layers.py`, `open_llm_eval.py`) and test suite |
 | `Dockerfile`, `box.sh` | The image and the entrypoint the protein language models ran through |
 
 ## Sources

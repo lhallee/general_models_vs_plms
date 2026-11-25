@@ -124,8 +124,9 @@ pre.cli { background: var(--tint); border: 1px solid var(--line); border-radius:
       </div>
       <div class="banner-links">
         <a class="btn primary" href="index.html">Our Experiment Explainer (M1-M14, B1-B2, A1-A6)</a>
-        <a class="btn" href="../RESULTS.md">Full Tables (RESULTS.md)</a>
-        <a class="btn" href="../COMPILATION.md">Markdown Index</a>
+        <a class="btn" href="https://github.com/lhallee/general_models_vs_plms/blob/main/RESULTS.md" target="_blank" rel="noopener">Full Tables (RESULTS.md)</a>
+        <a class="btn" href="https://github.com/lhallee/general_models_vs_plms/blob/main/COMPILATION.md" target="_blank" rel="noopener">Markdown Index</a>
+        <a class="btn" href="https://github.com/lhallee/general_models_vs_plms" target="_blank" rel="noopener">GitHub Repo</a>
       </div>
     </div>
   </header>
@@ -405,7 +406,7 @@ py -X utf8 -m general_models_vs_plms.catalog query --model GPT-6 --axis-concern 
         <p>${esc(s.takeaway)}</p>
         <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
           <button class="btn" data-study="${esc(s.id)}">Open Full Methods &amp; 8-Axis Audit</button>
-          <a class="small" href="../studies/${esc(s.id)}.md">Markdown dossier</a>
+          <a class="small" href="https://github.com/lhallee/general_models_vs_plms/blob/main/studies/${esc(s.id)}.md" target="_blank" rel="noopener">Markdown dossier</a>
           <a class="small" href="${esc(s.urls[0])}" target="_blank" rel="noopener">Primary source</a>
         </div>
       </div>`).join("");
