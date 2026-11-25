@@ -1,0 +1,94 @@
+{
+  "id": "rowan_2026_binder_optimization",
+  "title": "Binder Optimization with LLMs and Specialized Models (TNKS2 Small-Molecule Lead Optimization)",
+  "short_label": "Ganti / Rowan 2026 (Binder Opt)",
+  "authors": "Ishaan Ganti (Rowan Scientific)",
+  "date": "2026-08-17",
+  "updated_date": "",
+  "source_tier": "blog_repo",
+  "read_depth": "full_text",
+  "urls": [
+    "https://rowansci.com/blog/binder-optimization-llms"
+  ],
+  "tasks": [
+    "docking",
+    "backbone_and_binder_design"
+  ],
+  "regimes": [
+    "hybrid_generation_plus_oracle_filter",
+    "intrinsic_with_code"
+  ],
+  "models_tested": [
+    "GPT-5.6 Sol (High)",
+    "Claude Opus 5 (High)",
+    "Claude Opus 5 (High, no RDKit ablation)"
+  ],
+  "plm_baselines": [
+    "FLOWR.root (3D pocket flow matching)",
+    "CReM",
+    "REINVENT 4 (LibInvent)",
+    "DiffDec (3D diffusion)"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "Full tables, prompt appendix, and constraint lists in blog post; no public repo link or experimental validation.",
+  "methods": {
+    "datasets": "Tankyrase 2 (TNKS2) neutral phenylquinazolinone scaffold (Ligand 1a, experimental -8.55 kcal/mol; Rowan RBFE calibration R^2=0.411, rho=0.621, RMSE=0.768 kcal/mol); plus an F85Q pocket-mutation control.",
+    "evaluation_protocol": "5 structural/chemical constraints + negative docking/MM-GBSA filter; 32 ligands/batch. Specialized baselines run 1-shot only with imposed decoration site/size priors; LLMs run in a no-network Python/RDKit sandbox choosing sites freely for 1-shot AND 4 iterative rounds with RBFE ddG, MM/GBSA, and docking feedback.",
+    "controls_included": "Wild-type vs F85Q pocket-mutation control (testing whether fluorinated para substituents adapt to pocket sterics), accidental Opus 5 no-RDKit ablation, and cross-method cycle-closure RBFE network check (RMS error 2.59 kcal/mol).",
+    "compute_and_tools": "23 RBFE jobs / 739 transformations (56.5 h). LLMs run 4 iterative RBFE-guided rounds with free site selection while specialized baselines run 1-shot only.",
+    "metrics": "Hub-and-spoke RBFE ddG (kcal/mol vs parent) and ddG per added heavy atom.",
+    "wet_lab_protocol": "None (computational RBFE only)."
+  },
+  "key_results": [
+    {
+      "claim_id": "rowan_tnks2_1shot_and_4round_rbfe",
+      "task": "docking",
+      "regime": "hybrid_generation_plus_oracle_filter",
+      "benchmark": "TNKS2 scaffold decoration (32 ligands/round, RBFE ddG kcal/mol)",
+      "metric": "Top-1 / Top-5 RBFE ddG (more negative = tighter)",
+      "llm_model": "GPT-5.6 Sol / Claude Opus 5 (1-shot -> 4 rounds RBFE feedback)",
+      "llm_score": "1-shot: GPT-5.6 Sol -5.44, Opus 5 -3.22 (-4.09 no RDKit); Round 4: GPT-5.6 Sol -9.23, Opus 5 -5.80 (-6.86 no RDKit); F85Q control drops fluorinated para site from 24/32 -> 1/32 (GPT) & 18/32 -> 4/32 (Opus)",
+      "baseline_model": "CReM / FLOWR.root (mixed) / DiffDec / REINVENT 4 (1-shot only)",
+      "baseline_score": "1-shot: CReM -7.84, FLOWR mixed -6.00, DiffDec -4.18, REINVENT 4 -3.99",
+      "wet_lab": false,
+      "evidence_strength": "suggestive_confounded",
+      "notes": "F85Q pocket-mutation control cleanly proves LLMs respond to 3D pocket geometry rather than only reciting PDB TNKS2 inhibitors. However, specialized baselines were restricted to 1-shot with imposed site priors (where CReM and FLOWR beat LLMs), and all scores rest on computational RBFE (cycle-closure RMS error 2.59 kcal/mol) on one scaffold."
+    }
+  ],
+  "confounder_audit": {
+    "temporal_cutoff": {
+      "status": "evidenced_concern",
+      "evidence": "TNKS2 and its PDB inhibitors predate model cutoffs (Opus 5 1-shot designs show higher Tanimoto similarity to PDB TNKS2 inhibitors), partially mitigated by the F85Q mutant pocket control."
+    },
+    "homology_overlap": {
+      "status": "not_applicable",
+      "evidence": "Single-target small-molecule lead optimization on one scaffold."
+    },
+    "cross_modal_literature_recall": {
+      "status": "controlled",
+      "evidence": "TNKS2 is unnamed in prompt text (inferable from PDB coords), and F85Q pocket-mutation control drops fluorinated para substitutions from 24/32 -> 1/32 (GPT-5.6 Sol) and 18/32 -> 4/32 (Opus 5)."
+    },
+    "preprocessing_artifacts": {
+      "status": "evidenced_concern",
+      "evidence": "Appendix B discloses a structural non-binding Zn ion was accidentally stripped during PDBFixer prep (post-hoc check R^2=0.86, rho=0.90); DiffDec required OBabel + re-docking while FLOWR bypassed docking."
+    },
+    "downstream_oracle_filtering": {
+      "status": "evidenced_concern",
+      "evidence": "Graded solely by Rowan RBFE (Merck calibration R^2=0.411, rho=0.621; cross-method cycle-closure RMS error 2.59 kcal/mol, max 4.33 kcal/mol) with no wet-lab IC50/KD."
+    },
+    "compute_and_tool_asymmetry": {
+      "status": "evidenced_concern",
+      "evidence": "LLMs ran 4 iterative rounds with RBFE feedback and free site choice while specialized baselines ran 1-shot only with imposed site/size distributions (explicitly acknowledged by author)."
+    },
+    "baseline_fairness": {
+      "status": "evidenced_concern",
+      "evidence": "Asymmetric 1-shot specialist vs 4-round iterative LLM comparison; single 32-ligand batch without multi-seed variance."
+    },
+    "data_and_wetlab_transparency": {
+      "status": "evidenced_concern",
+      "evidence": "Detailed numbers and prompts published in blog post, but no wet-lab validation and only one receptor/scaffold."
+    }
+  },
+  "critiques_and_commentary": [],
+  "takeaway": "On TNKS2 small-molecule scaffold decoration, 1-shot CReM (-7.84 kcal/mol) and FLOWR (-6.00) beat 1-shot LLMs (-3.22 to -5.44), while 4 rounds of RBFE feedback lift GPT-5.6 Sol to -9.23 kcal/mol and an F85Q pocket-mutation control proves genuine structural responsiveness. However, specialized models were not run iteratively, and claims rest on noisy computational RBFE on one target without wet-lab verification."
+}

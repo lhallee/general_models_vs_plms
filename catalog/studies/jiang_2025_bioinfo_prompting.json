@@ -1,0 +1,94 @@
+{
+  "id": "jiang_2025_bioinfo_prompting",
+  "title": "Benchmarking Large Language Models on Multiple Tasks in Bioinformatics NLP with Prompting",
+  "short_label": "Jiang et al. 2025 (Bioinfo Prompting)",
+  "authors": "Jiyue Jiang, Pengan Chen, Jiuming Wang, Dongchen He, Ziqin Wei, Liang Hong, Licheng Zong, Sheng Wang, Qinze Yu, Zixian Ma, Yanyu Chen, Yimin Fan, Xiangyu Shi, Jiawei Sun, Chuan Wu, Yu Li",
+  "date": "2025-03-06",
+  "updated_date": "",
+  "source_tier": "preprint",
+  "read_depth": "full_text",
+  "urls": [
+    "https://arxiv.org/abs/2503.04013"
+  ],
+  "tasks": [
+    "inverse_folding",
+    "structure_prediction",
+    "protein_qa_and_reasoning"
+  ],
+  "regimes": [
+    "intrinsic_text_only"
+  ],
+  "models_tested": [
+    "GPT-4o",
+    "Llama-3.1-70B",
+    "Mistral-large-2 (123B)",
+    "Qwen-2.5-72B",
+    "Yi-1.5-34B",
+    "InternLM-2.5-20B"
+  ],
+  "plm_baselines": [
+    "None (zero pLM or bioinformatics baselines evaluated)"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "No public repository or dataset URL provided in the preprint; Pfam/Rfam numbers omitted from Table 2.",
+  "methods": {
+    "datasets": "30 bioinformatics tasks including PDB secondary structure sst8 (N=264), PDB inverse folding from secondary structure (N=264), protein species prediction (N=200), RBP binding (N=70), and Pfam family generation.",
+    "evaluation_protocol": "0-shot and 5-shot CoT prompting (10-shot for Pfam) at temp=0.2 with BioFinder (QLoRA xFinder-llama38it, 93.5% extraction accuracy) for answer parsing; tests continuous vs space vs newline sequence tokenization.",
+    "controls_included": "0-shot vs 5-shot comparison and sequence tokenization ablation (newline separation gives >3x alignment accuracy over continuous strings).",
+    "compute_and_tools": "Identical text-only prompting across all 6 vanilla LLMs with no external tools.",
+    "metrics": "Accuracy (species, RBP), sequence/sst8 recovery (%), bit score (Pfam).",
+    "wet_lab_protocol": "None."
+  },
+  "key_results": [
+    {
+      "claim_id": "bioinfo_prompting_if_and_sst8",
+      "task": "inverse_folding",
+      "regime": "intrinsic_text_only",
+      "benchmark": "PDB inverse folding from secondary structure (N=264) & sst8 prediction (N=264)",
+      "metric": "Sequence / sst8 recovery (%) at 0-shot -> 5-shot",
+      "llm_model": "6 vanilla 2024 LLMs (GPT-4o, Llama-3.1-70B, Qwen-2.5-72B, Mistral-large-2, Yi-1.5-34B, InternLM-2.5-20B)",
+      "llm_score": "Inverse folding 4.64%-6.95% (near 5% random 1/20 AA chance); sst8 recovery 23.99%-34.31% (best Llama-3.1-70B)",
+      "baseline_model": "None (no ProteinMPNN / NetSurfP / pLM baseline)",
+      "baseline_score": "Random 1/20 AA = 5.0%",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "Clean negative result showing vanilla 2024 LLMs fail text-prompted inverse folding (near 5% chance) and score weakly on secondary structure; 5-shot species jump (4-12% -> 75-82%) largely reflects revealing label format."
+    }
+  ],
+  "confounder_audit": {
+    "temporal_cutoff": {
+      "status": "uncontrolled",
+      "evidence": "No temporal cutoff applied to PDB or species datasets."
+    },
+    "homology_overlap": {
+      "status": "uncontrolled",
+      "evidence": "Protein PDB tasks deduplicate only exact matches with no homology clustering between 5-shot/10-shot exemplars and test items."
+    },
+    "cross_modal_literature_recall": {
+      "status": "evidenced_concern",
+      "evidence": "RBP prompts give explicit protein name and species; 10-shot Pfam generation supplies 10 homologous sequences from the target family (App D), turning generation into in-context consensus copying."
+    },
+    "preprocessing_artifacts": {
+      "status": "evidenced_concern",
+      "evidence": "BPE tokenization changes sequence accuracy >3x (Fig 4); 5-shot species jumps 6-20x from label-set formatting; BioFinder still mis-extracts 6.5% of sequences; Pfam omitted from Table 2 with text typos in Sec 5.4."
+    },
+    "downstream_oracle_filtering": {
+      "status": "not_applicable",
+      "evidence": "Direct prompted outputs without oracle filtering."
+    },
+    "compute_and_tool_asymmetry": {
+      "status": "controlled",
+      "evidence": "Identical 0-shot/5-shot CoT prompting across all 6 vanilla LLMs with no tools."
+    },
+    "baseline_fairness": {
+      "status": "evidenced_concern",
+      "evidence": "Zero pLMs or bioinformatics baselines (BLAST, ProteinMPNN, NetSurfP) evaluated."
+    },
+    "data_and_wetlab_transparency": {
+      "status": "evidenced_concern",
+      "evidence": "No public code or dataset URL, no wet-lab data, and Pfam/Rfam omitted from Table 2."
+    }
+  },
+  "critiques_and_commentary": [],
+  "takeaway": "Six vanilla 2024 LLMs under 0-shot and 5-shot prompting fail at protein inverse folding (4.6-7.0%, near 5% random chance) and reach only 24-34% secondary-structure recovery, while newline tokenization shifts sequence accuracy more than threefold. Missing pLM/bioinformatics baselines, homology controls, and public datasets limit interpretation of the 5-shot species and 10-shot Pfam gains."
+}

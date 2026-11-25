@@ -1,0 +1,56 @@
+{
+  "id": "huang_2026_biomni",
+  "title": "Autonomous Biomedical Research with an Artificial Intelligence Agent (Biomni)",
+  "short_label": "Huang et al. 2026 (Biomni)",
+  "authors": "Kexin Huang, Serena Zhang, Hanchen Wang, Jure Leskovec, et al.",
+  "date": "2026-07-01",
+  "updated_date": "",
+  "source_tier": "peer_reviewed",
+  "read_depth": "queued_unread",
+  "urls": [
+    "https://doi.org/10.1126/science.adz4351",
+    "https://doi.org/10.1101/2025.05.30.656746"
+  ],
+  "tasks": [
+    "protein_qa_and_reasoning",
+    "backbone_and_binder_design"
+  ],
+  "regimes": [
+    "tool_orchestrated_agent"
+  ],
+  "models_tested": [
+    "Biomni biomedical agent (pending full PDF read)"
+  ],
+  "plm_baselines": [
+    "150+ biomedical tools and databases (pending full PDF read)"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "Unverified (queued unread).",
+  "methods": {
+    "datasets": "Biomedical and protein research workflows (pending full PDF read).",
+    "evaluation_protocol": "Pending full PDF read.",
+    "controls_included": "Pending full PDF read.",
+    "compute_and_tools": "Pending full PDF read.",
+    "metrics": "Pending full PDF read.",
+    "wet_lab_protocol": "Pending full PDF read."
+  },
+  "key_results": [
+    {
+      "claim_id": "biomni_queued",
+      "task": "protein_qa_and_reasoning",
+      "regime": "tool_orchestrated_agent",
+      "benchmark": "Autonomous biomedical workflows",
+      "metric": "Pending full PDF read",
+      "llm_model": "Biomni",
+      "llm_score": "Pending full PDF read",
+      "baseline_model": "Pending full PDF read",
+      "baseline_score": "Pending full PDF read",
+      "wet_lab": false,
+      "evidence_strength": "queued",
+      "notes": "Science paywall / bioRxiv HTTP 429; queued without critique until full text is read."
+    }
+  ],
+  "confounder_audit": {},
+  "critiques_and_commentary": [],
+  "takeaway": "Queued unread (Science paywall / bioRxiv HTTP 429 on 2026-11-25): general-purpose biomedical AI agent orchestrating 150+ tools; excluded from critiques until full text is verified."
+}

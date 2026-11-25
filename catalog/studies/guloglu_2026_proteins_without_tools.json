@@ -1,0 +1,160 @@
+{
+  "id": "guloglu_2026_proteins_without_tools",
+  "title": "Proteins Without Tools: Folding and Binding Physics in Frontier Reasoning Models",
+  "short_label": "Guloglu 2026 (Proteins Without Tools)",
+  "authors": "Talu Guloglu",
+  "date": "2026-11-24",
+  "updated_date": "",
+  "source_tier": "blog_repo",
+  "read_depth": "full_post_and_code",
+  "urls": [
+    "https://talugueloglu.github.io/protein-without-tools/",
+    "https://github.com/talugueloglu/protein-without-tools",
+    "https://x.com/gueloglut/status/2125377578324418988"
+  ],
+  "tasks": [
+    "structure_prediction",
+    "inverse_folding",
+    "sequence_recall",
+    "protein_qa_and_reasoning",
+    "variant_effect_zero_shot",
+    "backbone_and_binder_design"
+  ],
+  "regimes": [
+    "intrinsic_text_only",
+    "hybrid_generation_plus_oracle_filter"
+  ],
+  "models_tested": [
+    "GPT-6.1 Sol (think 4096)",
+    "GPT-6.2 Sol (think 4096)",
+    "GPT-6.2 Astra (think 4096)"
+  ],
+  "plm_baselines": [
+    "ESMFold-2 (Task 1 forward folding)",
+    "ProteinMPNN v_48_020 (Task 2 inverse folding)",
+    "ESM-2 650M & Smith-Waterman (Task 3 remote homology)",
+    "NetGO 4.0 (Task 4 CAFA-6 function)",
+    "ESMFold-2 -> SaProt 650M & ESM-2 650M (Task 5 monomer alanine scan)",
+    "Boltz-2 -> StaB-ddG (zero SKEMPI training) & ESM-2 650M (Task 6 interface alanine scan)",
+    "RFdiffusion3 + ProteinMPNN (Task 7 de novo/motif design)",
+    "BoltzGen (Task 8 closed-loop binder design)"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "Public GitHub repository with all 582 targets, anti-cheat/leakage pytest suite, and JSON result reports across all 8 tasks.",
+  "methods": {
+    "datasets": "582 datapoints across 8 tasks: T1 forward folding (100 PDBs across 5 novelty strata), T2 inverse folding (same 100 stripped CA-only UNK backbones), T3 remote homology (120 SCOPe pairs across 3 difficulty rungs + decoys), T4 CAFA-6 function (120 UniProt entries in 2x3 pre/post-May-2026 x NK/LK/PK), T5 monomer alanine scan (52 panels x 18 = 936 mutations incl. 12 post-cutoff MaveDB & 24 de novo), T6 interface alanine scan (38 complexes: 31 pre-2026 PDB, 7 unseen/post-2026), T7 de novo & motif design (40 targets), T8 closed-loop AF2 binder design (12 epitopes x 16 shots).",
+    "evaluation_protocol": "Tasks 1-7 strictly forbid tools, code execution, databases, alignments, and predictors (--thinking-budget 4096). All 582 prompts strip PDB IDs, gene names, organism labels, and MSAs, checked by automated leakage tests. Task 8 runs 16-shot closed-loop AF2 feedback.",
+    "controls_included": "Pre- vs post-May-2026 cutoffs across Tasks 1/2/4/6/8, TM-score novelty stratification, same-AA neutral decoy pairing in T5/T6 (holding 1D AA-lookup win rate to 50.0% and AA-demeaned rho to 0.000), CAFA-6 Post-NK blind cell, and 5-gate anti-cheat design hygiene.",
+    "compute_and_tools": "Uniform 4096 thinking budget, zero tools on Tasks 1-7; Task 8 compares 16-shot closed-loop AF2 LLMs vs 16 open-loop BoltzGen samples.",
+    "metrics": "TM-score, scTM, AUROC & Recall@10%FPR, IA-weighted wFmax, Spearman rho, NDCG@5, Same-AA win rate, AA-demeaned rho, 4/5-gate design pass rate, Hit@16.",
+    "wet_lab_protocol": "None (computational evaluation on experimental ground truth for T3-T6 and refolding oracles for T1/T2/T7/T8)."
+  },
+  "key_results": [
+    {
+      "claim_id": "guloglu_t1_t2_folding_and_if_without_tools",
+      "task": "inverse_folding",
+      "regime": "intrinsic_text_only",
+      "benchmark": "Tasks 1 & 2: 100 PDB monomers across 5 novelty strata (no tools, no IDs)",
+      "metric": "Forward TM-score / Inverse-folding scTM",
+      "llm_model": "GPT-6.1 Sol, GPT-6.2 Sol, GPT-6.2 Astra (think 4096, zero tools)",
+      "llm_score": "Forward folding: all 3 models < 0.50 TM; Inverse folding: 0.43-0.46 scTM",
+      "baseline_model": "ESMFold-2 (T1) / ProteinMPNN v_48_020 (T2)",
+      "baseline_score": "ESMFold-2 0.8853 TM (0.8240 on struct_novel); ProteinMPNN 0.88-0.94 scTM",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "Crucial tool-free counterpoint to OpenAI's GPT-6 preprint: stripping code execution, IDs, and AFDB relaxation artifacts drops GPT-6.2 inverse folding to 0.43-0.46 scTM vs ProteinMPNN 0.88-0.94."
+    },
+    {
+      "claim_id": "guloglu_t3_twilight_homology",
+      "task": "sequence_recall",
+      "regime": "intrinsic_text_only",
+      "benchmark": "Task 3: 120 SCOPe 2.08 pairs (seq-easy, Foldseek 9-14% ID, deep twilight 8-16% ID, decoys)",
+      "metric": "AUROC / Recall@10%FPR [Rung 1, 2, 3]",
+      "llm_model": "GPT-6.2 Astra / GPT-6.2 Sol / GPT-6.1 Sol",
+      "llm_score": "GPT-6.2 Astra 0.893 AUROC [1.000, 0.667, 0.500]; GPT-6.2 Sol 0.863 [1.000, 0.633, 0.433]",
+      "baseline_model": "ESM-2 650M / Smith-Waterman",
+      "baseline_score": "ESM-2 650M 0.756 AUROC [0.600, 0.400, 0.400]; Smith-Waterman 0.754 [1.000, 0.300, 0.233]",
+      "wet_lab": false,
+      "evidence_strength": "suggestive_confounded",
+      "notes": "Impressive win over ESM-2 650M on every rung, though SCOPe 2.08 sequences predate GPT-6 training cutoffs so pretraining exposure to SCOPe families cannot be fully excluded."
+    },
+    {
+      "claim_id": "guloglu_t4_cafa6_postcutoff_drop",
+      "task": "protein_qa_and_reasoning",
+      "regime": "intrinsic_text_only",
+      "benchmark": "Task 4: CAFA-6 function prediction (Post-NK blind cell, May-Oct 2026, n=20)",
+      "metric": "Macro IA-weighted wFmax (Pre-NK -> Post-NK)",
+      "llm_model": "GPT-6.2 Astra / GPT-6.2 Sol",
+      "llm_score": "GPT-6.2 Astra: Pre-NK 0.5974 -> Post-NK 0.3734 (-0.224 drop); GPT-6.2 Sol: 0.5367 -> 0.3823",
+      "baseline_model": "NetGO 4.0",
+      "baseline_score": "Pre-NK 0.5497 -> Post-NK 0.4521 (beats all LLMs by ~0.07-0.08 on blind Post-NK)",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "Clean temporal-leakage demonstration: GPT-6.2 Astra beats NetGO 4.0 pre-cutoff (0.597 vs 0.550) but collapses -0.224 below NetGO 4.0 (0.373 vs 0.452) on truly unseen Post-NK proteins."
+    },
+    {
+      "claim_id": "guloglu_t5_t6_alanine_same_aa_and_postcutoff",
+      "task": "variant_effect_zero_shot",
+      "regime": "intrinsic_text_only",
+      "benchmark": "Tasks 5 & 6: Monomer (52 panels) & Interface (38 complexes) alanine scanning with same-AA decoys",
+      "metric": "Spearman rho / Same-AA win / AA-demeaned rho",
+      "llm_model": "GPT-6.2 Astra",
+      "llm_score": "T5 overall: rho 0.494 (AA-demeaned 0.215, same-AA win 58.1%); T5 post-cutoff MaveDB (n=12): rho 0.144; T6 interface: pre-2026 rho 0.515 (demeaned 0.436) -> unseen/post-2026 (n=7) rho 0.163 (demeaned -0.038)",
+      "baseline_model": "ESMFold-2->SaProt 650M (T5) / Boltz-2->StaB-ddG & ESM-2 650M (T6)",
+      "baseline_score": "T5 SaProt: overall rho 0.478 (AA-demeaned 0.461, same-AA win 70.7%), post-cutoff MaveDB rho 0.328; T6 ESM-2 on unseen/post-2026: rho 0.159 (AA-demeaned 0.336, same-AA win 63.7%)",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "Same-AA decoy controls expose the mechanism: GPT-6.2 scores high overall on T5 mainly via 1D residue-type priors (AA-demeaned rho 0.215 vs SaProt 0.461) and collapses on unseen/post-2026 interfaces (AA-demeaned -0.038 vs pre-2026 +0.436)."
+    },
+    {
+      "claim_id": "guloglu_t7_t8_design_without_tools",
+      "task": "backbone_and_binder_design",
+      "regime": "hybrid_generation_plus_oracle_filter",
+      "benchmark": "Tasks 7 (40 fold/motif designs, zero tools) & 8 (12 epitopes x 16 AF2 closed-loop shots)",
+      "metric": "4-gate designable pass rate (T7) / Hit@16 (T8)",
+      "llm_model": "GPT-6.1 Sol, GPT-6.2 Sol, GPT-6.2 Astra",
+      "llm_score": "T7: 0.0% across all 3 models (fold TM>=0.50: 0.0%); T8: 0.0% Hit@16 across all 3 models (best ipTM 0.125-0.262)",
+      "baseline_model": "RFdiffusion3 + ProteinMPNN (T7) / BoltzGen 16-shot open-loop (T8)",
+      "baseline_score": "T7: 5.0% 4-gate pass (fold TM>=0.50: 100%, motif<=1A: 62.5%); T8: BoltzGen 8.33% Hit@16 (mean traj 0.542 vs LLM 0.34-0.43)",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "Shows that without Python geometry scripts and SolubleMPNN, GPT-6.2 fails every single de novo fold/motif design and 16-shot AF2 binder campaign under strict anti-cheat gates."
+    }
+  ],
+  "confounder_audit": {
+    "temporal_cutoff": {
+      "status": "controlled",
+      "evidence": "Explicit pre- vs post-May-2026 stratification across Tasks 1, 2, 4, 5, 6, and 8 directly exposes memorization drops (CAFA-6 Post-NK -0.224; T6 unseen interfaces 0.515 -> 0.163); note T3 SCOPe 2.08 and T5 MegaScale de novo predate May 2026."
+    },
+    "homology_overlap": {
+      "status": "controlled",
+      "evidence": "Groups T1/T2 targets into 5 TM-score novelty strata (incl. 18 struct_novel TM < 0.53 and 28 de novo) and isolates twilight-zone homology in T3."
+    },
+    "cross_modal_literature_recall": {
+      "status": "controlled",
+      "evidence": "Strips PDB IDs, gene names, organism labels, and MSAs across all 582 prompts, verified by automated pytest anti-cheat/leakage checks; flags LK/PK literature persistence in T4."
+    },
+    "preprocessing_artifacts": {
+      "status": "controlled",
+      "evidence": "Same-AA neutral decoys cleanly separate 1D residue priors from 3D context; 5-gate hygiene blocks repeat-rod cheating in T7; minor T6 parse failures (89.5-92.1% parse ok) transparently logged."
+    },
+    "downstream_oracle_filtering": {
+      "status": "controlled",
+      "evidence": "Tasks 1-7 use zero external tools/oracles during generation; Task 8 explicitly tests 16-shot AF2 closed-loop feedback and still observes 0% Hit@16."
+    },
+    "compute_and_tool_asymmetry": {
+      "status": "controlled",
+      "evidence": "Uniform 4096 thinking budget and zero tools on Tasks 1-7 across all 3 GPT-6 models; Task 8 actually favors LLMs (closed-loop AF2 vs open-loop BoltzGen) yet LLMs still score 0%."
+    },
+    "baseline_fairness": {
+      "status": "controlled",
+      "evidence": "Strong dedicated specialist baselines on every task (ESMFold-2, ProteinMPNN, ESM-2 650M, NetGO 4.0, SaProt 650M, zero-SKEMPI StaB-ddG, RFdiffusion3+ProteinMPNN, BoltzGen)."
+    },
+    "data_and_wetlab_transparency": {
+      "status": "controlled",
+      "evidence": "All 582 targets, prompts, anti-cheat tests, and JSON result reports are public on GitHub (caveat: single inference run n=1, small post-cutoff subgroups n=7 in T6 / n=20 in T4 Post-NK, and computational only)."
+    }
+  },
+  "critiques_and_commentary": [],
+  "takeaway": "Across 582 identifier-stripped, cutoff-stratified targets without tools, GPT-6.2 models fail forward folding (<0.50 TM), inverse folding (0.43-0.46 scTM vs ProteinMPNN 0.88-0.94), de novo design (0%), and closed-loop binder design (0%), and collapse on post-cutoff CAFA-6 function (-0.224) and unseen interface scans (AA-demeaned rho -0.038). Same-AA decoy controls show their monomer alanine ranking relies heavily on 1D amino-acid priors rather than 3D physics, while they beat ESM-2 650M on SCOPe twilight-zone homology (0.893 vs 0.756 AUROC)."
+}

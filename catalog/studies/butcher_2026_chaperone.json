@@ -1,0 +1,54 @@
+{
+  "id": "butcher_2026_chaperone",
+  "title": "Reliable and Efficient Agentic Protein Design with Toolset Harnessing (Chaperone)",
+  "short_label": "Butcher et al. 2026 (Chaperone)",
+  "authors": "Jasper Butcher, Jie Chen, Andrew Hunt, et al.",
+  "date": "2026-10-20",
+  "updated_date": "",
+  "source_tier": "preprint",
+  "read_depth": "queued_unread",
+  "urls": [
+    "https://doi.org/10.64898/2026.10.19.759896"
+  ],
+  "tasks": [
+    "backbone_and_binder_design"
+  ],
+  "regimes": [
+    "tool_orchestrated_agent"
+  ],
+  "models_tested": [
+    "LLM agents (pending PDF read)"
+  ],
+  "plm_baselines": [
+    "RFdiffusion3, ProteinMPNN, AlphaFold 3 orchestrated via Chaperone (pending PDF read)"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "Unverified (queued unread).",
+  "methods": {
+    "datasets": "Pending full PDF read.",
+    "evaluation_protocol": "Standardized tool-harnessing interface for LLM agents coordinating RFdiffusion3, ProteinMPNN, and AF3 (pending full PDF read).",
+    "controls_included": "Pending full PDF read.",
+    "compute_and_tools": "Pending full PDF read.",
+    "metrics": "Pending full PDF read.",
+    "wet_lab_protocol": "Pending full PDF read."
+  },
+  "key_results": [
+    {
+      "claim_id": "chaperone_queued",
+      "task": "backbone_and_binder_design",
+      "regime": "tool_orchestrated_agent",
+      "benchmark": "Agentic protein design tool orchestration",
+      "metric": "Pending full PDF read",
+      "llm_model": "Chaperone agent",
+      "llm_score": "Pending full PDF read",
+      "baseline_model": "Pending full PDF read",
+      "baseline_score": "Pending full PDF read",
+      "wet_lab": false,
+      "evidence_strength": "queued",
+      "notes": "bioRxiv full-text PDF/JATS returned HTTP 429; queued without critique until full text is read."
+    }
+  ],
+  "confounder_audit": {},
+  "critiques_and_commentary": [],
+  "takeaway": "Queued unread (bioRxiv HTTP 429 on 2026-11-25): agentic tool-harnessing framework for RFdiffusion3/ProteinMPNN/AF3; excluded from critiques until full text is verified."
+}

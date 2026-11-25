@@ -1,0 +1,89 @@
+{
+  "id": "zeng_luo_2026_reflective_feedback",
+  "title": "Does Reflective LLM Feedback Survive a Wet-Lab-Scale Label Budget?",
+  "short_label": "Zeng & Luo 2026 (Reflective LLM)",
+  "authors": "Haoxuan Zeng and Xin Luo (University of Michigan)",
+  "date": "2026-11-01",
+  "updated_date": "",
+  "source_tier": "preprint",
+  "read_depth": "full_text",
+  "urls": [
+    "https://arxiv.org/abs/2611.01908"
+  ],
+  "tasks": [
+    "variant_effect_few_shot"
+  ],
+  "regimes": [
+    "tool_orchestrated_agent"
+  ],
+  "models_tested": [
+    "Claude Opus 5",
+    "Claude Sonnet 5",
+    "Claude Haiku 4.5"
+  ],
+  "plm_baselines": [
+    "ESM-2 150M + ridge/MLP/GBR predictor with: No edits, Random edits, Local search (1x/5x wall time), Static ridge (Hsu et al. 2022), Fixed greedy/UCB/div-greedy"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "Summary snapshot and validation scripts only; raw assay labels, embeddings, full run records, and controller-call logs are not released (Appendix A).",
+  "methods": {
+    "datasets": "36 ProteinGym single-substitution DMS assays (101,201 variants; 1,500-6,000 variants/assay, <=400 aa, 1 assay per UniProt accession).",
+    "evaluation_protocol": "Active-learning replay starting at 96 labels and adding 96/round for 6 rounds (384-672 labels in rounds 3-6) on 25% sealed random and position-disjoint test splits (3-5 seeds, 4,211 runs). LLM reads anonymized 5-fold CV diagnostics (no protein names or sequences) and proposes JSON edits to a 15-field ESM-2 150M modeling/acquisition pipeline.",
+    "controls_included": "Anonymized protein-free prompts, size-matched random edits, wall-time-matched local CV search (1x and 5x), static augmented ridge, one-call (round-1 only) and scalar-only reflection ablations, and Benjamini-Hochberg multiplicity correction.",
+    "compute_and_tools": "LLM proposes config JSONs only (no code/search); local search explicitly matched to 1x and 5x LLM wall time.",
+    "metrics": "Primary: sealed-test Fisher z = arctanh(rho) averaged over rounds 3-6 (TOST equivalence margin 0.02). Secondary: top-10% recovery R_96.",
+    "wet_lab_protocol": "None (offline ProteinGym replay at wet-lab label scale)."
+  },
+  "key_results": [
+    {
+      "claim_id": "reflective_llm_primary_null",
+      "task": "variant_effect_few_shot",
+      "regime": "tool_orchestrated_agent",
+      "benchmark": "36 ProteinGym assays, 96 labels/round (random & position-disjoint splits)",
+      "metric": "Fisher z (rounds 3-6) & R_96",
+      "llm_model": "Claude Opus 5 reflective controller over ESM-2 150M",
+      "llm_score": "Random z=0.590 (R_96=0.391); Position-disjoint z=0.461 (R_96=0.319)",
+      "baseline_model": "Random edits / No edits / Local search 5x / Static ridge",
+      "baseline_score": "Random split: Random edits z=0.597 (Delta_z=-0.008, [-0.034,+0.018]), No edits 0.603; Position-disjoint: Local search 5x z=0.506, Static ridge 0.492",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "Rigorous negative result: joint LLM reflection gives no test Spearman gain over random edits (p=0.55) or one-shot call (-0.011), and trails local CV search (0.506) on position-disjoint splits. Exploratory fixed-acquisition arm (LLM + random acq.) reaches z=0.647 (+0.043)."
+    }
+  ],
+  "confounder_audit": {
+    "temporal_cutoff": {
+      "status": "controlled",
+      "evidence": "Prompts strip all protein names, sequences, and assay identifiers, exposing only anonymized CV/stratum statistics (Appendix F.1)."
+    },
+    "homology_overlap": {
+      "status": "controlled",
+      "evidence": "36 distinct UniProt accessions tested under both random and 25% position-disjoint splits (Table 3)."
+    },
+    "cross_modal_literature_recall": {
+      "status": "controlled",
+      "evidence": "Complete protein anonymization prevents biological literature recall; LLM acts solely on ML diagnostics."
+    },
+    "preprocessing_artifacts": {
+      "status": "evidenced_concern",
+      "evidence": "Authors transparently report post-pilot search redesign, validator rejections (Opus no-menu rejected 640 entries across 509/648 calls yet reached z=0.638), and 1 missing Search-5x seed in the 5-seed grid."
+    },
+    "downstream_oracle_filtering": {
+      "status": "not_applicable",
+      "evidence": "Supervised active-learning replay over frozen ESM-2 150M features."
+    },
+    "compute_and_tool_asymmetry": {
+      "status": "controlled",
+      "evidence": "Matched against 1x and 5x wall-time local search and static augmented ridge."
+    },
+    "baseline_fairness": {
+      "status": "controlled",
+      "evidence": "20 well-matched non-LLM and ablation arms; only noted gap is missing one-call control for exploratory fixed-acquisition arms."
+    },
+    "data_and_wetlab_transparency": {
+      "status": "evidenced_concern",
+      "evidence": "Offline replay only, and raw assay labels, embeddings, and full controller logs are excluded from the released snapshot (Appendix A p.8)."
+    }
+  },
+  "critiques_and_commentary": [],
+  "takeaway": "In a well-controlled, protein-anonymized replay across 36 ProteinGym assays at 96 labels/round, iterative Claude Opus 5 reflection over an ESM-2 150M pipeline fails to beat random configuration edits (Delta_z = -0.008) or a single round-1 call (-0.011), and trails wall-time-matched local CV search on position-disjoint splits (0.461 vs 0.506). Gains appear only in exploratory arms where acquisition is fixed externally."
+}

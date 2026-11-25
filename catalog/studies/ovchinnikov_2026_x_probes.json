@@ -1,0 +1,57 @@
+{
+  "id": "ovchinnikov_2026_x_probes",
+  "title": "X Empirical Probes: Sequence Recall, Coevolution, and Contact-Map Folding in Claude Opus 5.5 and Fable 5.2",
+  "short_label": "Ovchinnikov 2026 (X Probes)",
+  "authors": "Sergey Ovchinnikov",
+  "date": "2026-11-19",
+  "updated_date": "2026-11-20",
+  "source_tier": "x_thread",
+  "read_depth": "queued_unread",
+  "urls": [
+    "https://x.com/sokrypton"
+  ],
+  "tasks": [
+    "sequence_recall",
+    "structure_prediction"
+  ],
+  "regimes": [
+    "intrinsic_text_only",
+    "intrinsic_with_code"
+  ],
+  "models_tested": [
+    "Claude Fable 5.2",
+    "Claude Opus 5.5"
+  ],
+  "plm_baselines": [
+    "Pending direct X thread archive"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "Contact-map fold() script reproduced in Kosinski CheckLLMfold; original X threads require signed-in X session to archive verbatim.",
+  "methods": {
+    "datasets": "Protein sequence recall, coevolutionary coupling, paired alignment recall, and contact-map folding (pending verbatim X thread archive).",
+    "evaluation_protocol": "Pending direct signed-in X thread extraction.",
+    "controls_included": "Pending direct signed-in X thread extraction.",
+    "compute_and_tools": "Pending direct signed-in X thread extraction.",
+    "metrics": "Pending direct signed-in X thread extraction.",
+    "wet_lab_protocol": "None."
+  },
+  "key_results": [
+    {
+      "claim_id": "ovchinnikov_x_probes_queued",
+      "task": "sequence_recall",
+      "regime": "intrinsic_text_only",
+      "benchmark": "Single-sequence vs paired-alignment recall and coevolution signal on X",
+      "metric": "Pending verbatim X thread archive",
+      "llm_model": "Claude Fable 5.2 / Claude Opus 5.5",
+      "llm_score": "Pending verbatim X thread archive",
+      "baseline_model": "Earlier Claude generations",
+      "baseline_score": "Pending verbatim X thread archive",
+      "wet_lab": false,
+      "evidence_strength": "queued",
+      "notes": "Requires signed-in X session or direct thread URLs to capture verbatim posts and numbers before assigning confounder tags."
+    }
+  ],
+  "confounder_audit": {},
+  "critiques_and_commentary": [],
+  "takeaway": "Queued unread (X login wall on profile search): Sergey Ovchinnikov's Nov 19-20, 2026 X probes on sequence recall, coevolution signal, and contact folding in Claude 5.2/5.5; excluded from critiques until verbatim threads are archived."
+}

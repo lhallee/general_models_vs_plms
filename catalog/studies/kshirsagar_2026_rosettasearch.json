@@ -1,0 +1,110 @@
+{
+  "id": "kshirsagar_2026_rosettasearch",
+  "title": "RosettaSearch: Multi-Objective Inference-Time Search for Protein Sequence Design",
+  "short_label": "Kshirsagar et al. 2026 (RosettaSearch)",
+  "authors": "Meghana Kshirsagar, Allen Nie, Ching-An Cheng, Fanglei Xue, Rahul Dodhia, Juan Lavista Ferres, Kevin K. Yang, Frank DiMaio",
+  "date": "2026-04-19",
+  "updated_date": "2026-04-30",
+  "source_tier": "preprint",
+  "read_depth": "full_text",
+  "urls": [
+    "https://arxiv.org/abs/2604.17175"
+  ],
+  "tasks": [
+    "inverse_folding",
+    "backbone_and_binder_design"
+  ],
+  "regimes": [
+    "tool_orchestrated_agent",
+    "hybrid_generation_plus_oracle_filter"
+  ],
+  "models_tested": [
+    "o4-mini",
+    "Gemini-3",
+    "o3-mini",
+    "Unnamed VLM"
+  ],
+  "plm_baselines": [
+    "LigandMPNN (single-pass init)",
+    "ProteinMPNN (single-pass init)",
+    "BindCraft (init)",
+    "Budget-matched random mutations + RF3",
+    "Chai-1 (independent refolding check)"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "Promised on GitHub upon release (Sec 7); no repository URL available in preprint.",
+  "methods": {
+    "datasets": "~400 (394 in Table 3 / 414 in Sec 6) low-fidelity PDB-D monomers, 275 de novo RFdiffusion backbones from Dayhoff Atlas (no native sequence context), and 48 (50 sampled) BindCraft binders.",
+    "evaluation_protocol": "Inference-time Priority Search / Sequential Revision over 75 RosettaFold3 (RF3, single-sequence no-MSA) calls per protein (3 textual step sizes x 25 RF3 calls; ~30.6 min/protein), guided by local residue-range pLDDT/TM-score/RMSD text feedback.",
+    "controls_included": "Budget-matched random mutations in flagged regions, Dayhoff no-native-sequence test, independent Chai-1 refolding evaluation, and context ablation table (Table 7). Missing: compute-matched LigandMPNN/ProteinMPNN best-of-75 + RF3 selection baseline.",
+    "compute_and_tools": "75 RF3 folding evaluations + LLM search (~30.6 min/protein) vs single-pass LigandMPNN/ProteinMPNN.",
+    "metrics": "Single-sequence pLDDT, TM-score, Ca RMSD, SR-1 (pLDDT >= 0.8 & TM >= 0.8), SR-2 (+ RMSD <= 1.5 A) under RF3 and Chai-1.",
+    "wet_lab_protocol": "None (purely computational)."
+  },
+  "key_results": [
+    {
+      "claim_id": "rosettasearch_dayhoff_denovo",
+      "task": "inverse_folding",
+      "regime": "hybrid_generation_plus_oracle_filter",
+      "benchmark": "275 Dayhoff de novo backbones (no native sequence context)",
+      "metric": "RF3 SR-1 / SR-2",
+      "llm_model": "RosettaSearch (o4-mini + 75 RF3 calls, ProteinMPNN init)",
+      "llm_score": "SR-1 89.5% (246/275), SR-2 67.3% (185/275), RMSD 1.78 A",
+      "baseline_model": "Single-pass ProteinMPNN (no budget-matched MPNN best-of-75)",
+      "baseline_score": "SR-1 72.4% (199/275), SR-2 45.5% (125/275), RMSD 3.32 A",
+      "wet_lab": false,
+      "evidence_strength": "suggestive_confounded",
+      "notes": "No native sequence leakage on Dayhoff, showing genuine RF3-guided search gains, but lacks a compute-matched ProteinMPNN-75 + RF3 baseline and Chai-1 cross-check on Dayhoff."
+    },
+    {
+      "claim_id": "rosettasearch_pdb_monomers_chai1",
+      "task": "inverse_folding",
+      "regime": "hybrid_generation_plus_oracle_filter",
+      "benchmark": "PDB-D monomers (LigandMPNN init, Table 2 & Table 7)",
+      "metric": "SR-1 under RF3 / Independent Chai-1",
+      "llm_model": "RosettaSearch (o4-mini + native sequence in prompt + 75 RF3 calls)",
+      "llm_score": "20.5% (RF3) -> 5.3% (Chai-1); without native seq in prompt: 11.4% RF3 (Table 7)",
+      "baseline_model": "Single-pass LigandMPNN / Random mutations + 75 RF3",
+      "baseline_score": "7.9% (RF3) / 3.1% (Chai-1) for both LigandMPNN and Random mutations",
+      "wet_lab": false,
+      "evidence_strength": "suggestive_confounded",
+      "notes": "Native sequence in prompt drives much of the PDB gain (11.4% -> 17.2%, Sec 3.2.2 notes LLM returning the native sequence), and RF3 overfitting cuts absolute SR-1 from 20.5% to 5.3% on Chai-1."
+    }
+  ],
+  "confounder_audit": {
+    "temporal_cutoff": {
+      "status": "uncontrolled",
+      "evidence": "PDB-D monomers and BindCraft binders predate o4-mini and Gemini-3 with no cutoff holdout."
+    },
+    "homology_overlap": {
+      "status": "uncontrolled",
+      "evidence": "Randomly sampled from PDB-D without homology clustering (RF3 runs MSA-free)."
+    },
+    "cross_modal_literature_recall": {
+      "status": "evidenced_concern",
+      "evidence": "PDB prompts explicitly supply the native sequence (Fig 10), raising SR-1 from 11.4% to 17.2% (Table 7), and Sec 3.2.2 documents the LLM returning the native sequence itself (Dayhoff removes this)."
+    },
+    "preprocessing_artifacts": {
+      "status": "evidenced_concern",
+      "evidence": "Sec 3.2.2 and A.4-A.5 document proxy hacking (poly-Ala tails, repeats, safe-residue overuse) and 44% (22/50) trace validation failures (budget violations, indexing bugs), plus minor N mismatches (394 vs 414)."
+    },
+    "downstream_oracle_filtering": {
+      "status": "evidenced_concern",
+      "evidence": "Direct 75-call RF3 reward optimization exhibits heavy RF3 overfitting: PDB SR-1 drops from 20.5% under RF3 to 5.3% under independent Chai-1 (Table 2)."
+    },
+    "compute_and_tool_asymmetry": {
+      "status": "evidenced_concern",
+      "evidence": "Compares 75 RF3-guided LLM search calls (~30.6 min/protein) against single-pass LigandMPNN/ProteinMPNN."
+    },
+    "baseline_fairness": {
+      "status": "evidenced_concern",
+      "evidence": "No budget-matched LigandMPNN/ProteinMPNN best-of-75 + RF3 selection baseline or ResiDPO comparison (only random mutations are budget-matched)."
+    },
+    "data_and_wetlab_transparency": {
+      "status": "evidenced_concern",
+      "evidence": "Purely in silico (no wet-lab validation) and code/data not yet released."
+    }
+  },
+  "critiques_and_commentary": [],
+  "takeaway": "RosettaSearch shows inference-time LLM priority search over RosettaFold3 feedback improves single-pass ProteinMPNN/LigandMPNN sequences (reaching 89.5% vs 72.4% SR-1 on Dayhoff de novo backbones without native sequences) and beats budget-matched random mutations. However, PDB gains lean heavily on placing the native sequence in the prompt, RF3 overfitting drops PDB success from 20.5% to 5.3% on Chai-1, and no budget-matched MPNN best-of-75 baseline or wet-lab check is provided."
+}

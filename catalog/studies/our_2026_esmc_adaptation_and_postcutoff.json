@@ -1,0 +1,134 @@
+{
+  "id": "our_2026_esmc_adaptation_and_postcutoff",
+  "title": "Mutation-Site ESMC Stacking, ConFit LoRA Preference Tuning, and Expanded Post-Cutoff MaveDB Suite",
+  "short_label": "Hallee et al. 2026 (ESMC Adaptation)",
+  "authors": "Logan Hallee (Synthyra) and collaborators",
+  "date": "2026-11-25",
+  "updated_date": "2026-11-25",
+  "source_tier": "our_experiment",
+  "read_depth": "full_text",
+  "urls": [
+    "https://github.com/lhallee/general_models_vs_plms"
+  ],
+  "tasks": [
+    "variant_effect_few_shot"
+  ],
+  "regimes": [
+    "intrinsic_text_only"
+  ],
+  "models_tested": [
+    "Qwen/Qwen3-14B (zero-spend open-weight BF16 pilot, direct mode)",
+    "Claude Mythos 5.2 (reference from FLIP2 ICL experiment)",
+    "Claude Fable 5.2 (reference from FLIP2 API experiment)"
+  ],
+  "plm_baselines": [
+    "ESMC-600M & ESMC-6B mutation-site local pooling + zero-shot ridge",
+    "ESMC-600M & ESMC-6B 5-fold out-of-fold multi-view stacked ridge (mean + mutsite + one-hot + zero-shot)",
+    "ConFit-style KL-anchored LoRA preference-tuned ESMC-300M & ESMC-600M",
+    "ESM-2 650M, ESMC-300M/600M/6B zero-shot and mean-pooled ridges"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "Full code, Docker entrypoint, pinned model revisions, negative controls, and paired-bootstrap tables in repository.",
+  "methods": {
+    "datasets": "Identical 16 FLIP2 splits + 2 FGFR2 splits (k=256, seed 0) plus 6 new post-June-2026 MaveDB splits across two unrelated human protein families: GBA1 GCase activity (urn:mavedb:00001327-a-1, 2026-11-11, 536 aa, 9,886 missense), ARAF kinase activity (urn:mavedb:00001314-0-4, 2026-10-16, 606 aa, 10,955 missense), and ARAF abundance (urn:mavedb:00001314-0-3, 2026-10-16, 606 aa, 5,037 missense). Max ungapped window identity <= 12.5% between post-cutoff families and <= 16.7% against FLIP2.",
+    "evaluation_protocol": "All models fit strictly on the 256 context rows with no test peeking. Track 1A combines frozen mean embeddings with zero-shot scores; Track 1B extracts mutated-site hidden states (h_mut[M], h_mut[M] - h_wt[M]) and fits 5-fold out-of-fold stacked multi-view ridges; Track 1C attaches rank-8 zero-initialized LoRA adapters to ESMC attention layers and trains 15 epochs with Bradley-Terry ranking loss + KL=0.1 anchor to frozen logits.",
+    "controls_included": "Shuffled-label negative controls for fusion, mutsite, stacked ridge (+0.009 to +0.011 on FLIP2; -0.077 to -0.042 on post-cutoff), and ConFit LoRA (drops -0.13 to -0.24 below real labels); epoch-0 ConFit parity verified to 0.0002 against zero-shot masked marginals; PRKN pre-cutoff upload explicitly audited and rejected.",
+    "compute_and_tools": "Ran inside pinned Docker image general_models_vs_plms:cu128-20261121 on oracle_gh200 (1x GH200); zero paid API spend.",
+    "metrics": "Mean Spearman correlation with 95% paired bootstrap intervals (2,000 draws) on exact first 100 queries (vs Mythos 5.2) and all 300 queries (vs frozen ridges and Fable 5.2).",
+    "wet_lab_protocol": "None (computational evaluation on primary MaveDB / FLIP2 experimental assays)."
+  },
+  "key_results": [
+    {
+      "claim_id": "pure_frozen_esmc_mutsite_beats_mythos_flip2",
+      "task": "variant_effect_few_shot",
+      "regime": "intrinsic_text_only",
+      "benchmark": "FLIP2 (16 splits, k=256, exact first 100 queries)",
+      "metric": "Mean Spearman (95% paired bootstrap CI)",
+      "llm_model": "Claude Mythos 5.2 (@harness-low)",
+      "llm_score": "0.3800 (0.3327 to 0.4219)",
+      "baseline_model": "Pure frozen ESMC-600M + ESMC-6B mutation-site+ZS ensemble (single ESMC-600M: 0.4288)",
+      "baseline_score": "0.4567 (0.4103 to 0.4960); diff +0.0768 (+0.0279 to +0.1238) vs Mythos, +0.0900 vs old ridge",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "Breaks the prior FLIP2 tie strictly in favor of pLMs without any LLM or fine-tuning. Shuffled-label controls score +0.0093 to +0.0107. On all 300 queries the pure frozen pLM ensemble reaches 0.4380 vs 0.3554 old ridge and 0.3649 Claude Fable 5.2."
+    },
+    {
+      "claim_id": "hybrid_mythos_mutsite_esmc600m_peak",
+      "task": "variant_effect_few_shot",
+      "regime": "intrinsic_text_only",
+      "benchmark": "FLIP2 (16 splits, k=256, exact first 100 queries)",
+      "metric": "Mean Spearman (95% paired bootstrap CI)",
+      "llm_model": "Equal-weight rank average (Claude Mythos 5.2 + mutsite+ZS ESMC-600M)",
+      "llm_score": "0.4667 (0.4219 to 0.5048)",
+      "baseline_model": "Claude Mythos 5.2 alone (0.3800) / prior hybrid record (0.443)",
+      "baseline_score": "+0.0867 (+0.0580 to +0.1129) over Mythos alone; +0.1000 over old ridge",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "Confirms strong complementarity between LLM reasoning and improved local pLM representations, raising the hybrid ceiling from 0.443 to 0.467."
+    },
+    {
+      "claim_id": "expanded_postcutoff_gba1_araf_esmc_stacked_and_confit",
+      "task": "variant_effect_few_shot",
+      "regime": "intrinsic_text_only",
+      "benchmark": "Expanded post-June-2026 MaveDB suite (6 splits: GBA1, ARAF activity, ARAF abundance; q300)",
+      "metric": "Mean Spearman (95% paired bootstrap CI)",
+      "llm_model": "Prior FGFR2 best pLM recipe (ridge_onehot_plus_esmc_6b)",
+      "llm_score": "0.4606 (0.4177 to 0.4989)",
+      "baseline_model": "ridge_stacked_esmc_6b / ridge_stacked_esmc_600m / ConFit LoRA ESMC-300M & 600M",
+      "baseline_score": "Stacked 6B: 0.5485 (+0.0879, +0.0507 to +0.1240); Stacked 600M: 0.5430; ConFit 300M/600M: 0.5161 / 0.5119",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "On single-site post-cutoff DMS, ConFit LoRA ESMC gains +0.053 to +0.065 over zero-shot (0.451-0.459) and beats old ridges, while frozen stacked ESMC-6B reaches 0.5485 (0.728 on GBA1, 0.669 on ARAF activity). Under FLIP2's stronger extrapolation shift, ConFit LoRA ESMC (0.310-0.334) trails frozen mutation-site/stacked ridges (0.414-0.457)."
+    },
+    {
+      "claim_id": "qwen3_14b_open_llm_controlled_pilot",
+      "task": "variant_effect_few_shot",
+      "regime": "intrinsic_text_only",
+      "benchmark": "Controlled 4-arm pilot on amylase/by_mutation (FLIP2) & fgfr2/random (post-cutoff), first 100 queries",
+      "metric": "Spearman correlation (all-100 median-filled)",
+      "llm_model": "Qwen/Qwen3-14B (BF16, direct mode, zero API spend)",
+      "llm_score": "amylase: k0 -0.121, k256 +0.403, cipher +0.077, flipped -0.337; fgfr2: k0 +0.053, k256 +0.404, cipher +0.406, flipped -0.372",
+      "baseline_model": "ridge_onehot (0.500 / 0.462), Claude Mythos 5.2 (0.661 / 0.662), ESMC-600M mutsite+ZS (0.609 / 0.546)",
+      "baseline_score": "One-hot ridge +0.500 / +0.462; ESMC-600M+6B +0.665 / +0.605",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "Separates tabular ICL from protein prior: Qwen3-14B has zero biological prior (k0 near 0) and scores identically on plain vs enciphered post-cutoff FGFR2 (+0.404 vs +0.406, reversing cleanly to -0.372 under flipped labels), trailing one-hot ridge, ESMC, and Mythos 5.2."
+    }
+  ],
+  "confounder_audit": {
+    "temporal_cutoff": {
+      "status": "controlled",
+      "evidence": "Evaluates 6 newly published post-June-2026 MaveDB splits across GBA1 and ARAF (Oct-Nov 2026) alongside FGFR2 (Nov 2026), explicitly rejecting pre-cutoff PRKN (Feb 2026 bioRxiv)."
+    },
+    "homology_overlap": {
+      "status": "controlled",
+      "evidence": "Audited pairwise ungapped window identity across all post-cutoff and FLIP2 parents (max 12.5% pairwise among post-cutoff families, <= 16.7% to FLIP2); evaluates both random and position-disjoint splits."
+    },
+    "cross_modal_literature_recall": {
+      "status": "controlled",
+      "evidence": "Pure pLM methods read protein sequences only; Mythos 5.2 comparison uses identical first-100 queries from our controlled FLIP2 experiment."
+    },
+    "preprocessing_artifacts": {
+      "status": "controlled",
+      "evidence": "Verified 0 wild-type mismatches across 25,878 missense rows, verified epoch-0 ConFit parity to 0.0002 against zero-shot masked marginals, guarded reference baseline tables against key overwrite, and reported two-chain pdz3 averaging as a conservative floor."
+    },
+    "downstream_oracle_filtering": {
+      "status": "not_applicable",
+      "evidence": "Direct continuous variant ranking without candidate filtering."
+    },
+    "compute_and_tool_asymmetry": {
+      "status": "controlled",
+      "evidence": "All methods trained strictly on the exact same 256 labeled variants with fixed recipes and no test peeking; frozen mutsite/stacked ridges run in ~2.4 min (600M) / ~4.4 min (6B) for all 18 splits."
+    },
+    "baseline_fairness": {
+      "status": "controlled",
+      "evidence": "Tests frozen mean-pool, one-hot+ZS, fusion, mutation-site local pooling, 5-fold multi-view stacking, and ConFit KL-anchored LoRA across ESM-2 650M and ESMC 300M/600M/6B with shuffled-label negative controls."
+    },
+    "data_and_wetlab_transparency": {
+      "status": "controlled",
+      "evidence": "All MaveDB URNs, licenses (CC0 / CC BY-SA 4.0), model revisions, negative controls, and paired-bootstrap JSONs recorded."
+    }
+  },
+  "critiques_and_commentary": [],
+  "takeaway": "The prior FLIP2 tie between Claude Mythos 5.2 (0.380) and ESMC ridge (0.367) was an artifact of global mean-pooling dilution: extracting mutation-site local embeddings plus zero-shot scores and 5-fold stacking lifts pure frozen ESMC (600M+6B) to 0.4567 on FLIP2 (+0.0768 strictly above Mythos 5.2, 95% CI +0.0279 to +0.1238) and 0.5485 across 6 new post-cutoff GBA1/ARAF splits, while hybridizing with Mythos 5.2 raises the overall peak to 0.4667. ConFit LoRA ESMC helps strongly on single-site post-cutoff DMS (+0.053 to +0.065) but trails frozen local/stacked ridges under FLIP2's heavier distribution shift."
+}

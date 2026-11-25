@@ -1,0 +1,197 @@
+{
+  "id": "openai_2026_gpt6_protein",
+  "title": "GPT-6 as a Universal Foundation Model for Protein Biology: Beyond Specialized Models",
+  "short_label": "OpenAI 2026 (GPT-6 Protein)",
+  "authors": "Masatoshi Uehara, Edward Zhou, Joshua Park, Morgan Griffiths, Austin Clyde, Suyash Shringarpure, Yuan Yuan, Kevin Rao, Anton Bushuiev, Michael Yu, Kathryn M. Collins, Jesse Hendricks, Puwanat Sangkhapreecha, Lee-Shin Chu, Sharrol Bachas, Joy Jiao (OpenAI Life Science Team and Onava AI)",
+  "date": "2026-11-24",
+  "updated_date": "",
+  "source_tier": "preprint",
+  "read_depth": "full_text",
+  "urls": [
+    "https://cdn.openai.com/pdf/gpt-6-a-universal-foundation-model-for-protein-biology.pdf",
+    "https://x.com/OpenAI/status/2125334383490105601"
+  ],
+  "tasks": [
+    "backbone_and_binder_design",
+    "inverse_folding",
+    "structure_prediction",
+    "docking",
+    "variant_effect_zero_shot"
+  ],
+  "regimes": [
+    "intrinsic_with_code",
+    "hybrid_generation_plus_oracle_filter",
+    "intrinsic_text_only"
+  ],
+  "models_tested": [
+    "GPT-5.6",
+    "GPT-6",
+    "GPT-6.2 (pre-release used in wet lab)",
+    "Undisclosed OpenAI internal models"
+  ],
+  "plm_baselines": [
+    "RFdiffusion",
+    "RFdiffusion3",
+    "Proteina",
+    "ProteinMPNN",
+    "AbMPNN",
+    "ESMFold2",
+    "DiffDock-L",
+    "FlowPacker-1 / FlowPacker-4",
+    "ESM2-650M (zero-shot)"
+  ],
+  "wet_lab_validated": true,
+  "code_and_data_released": "No code, prompts, designed sequences, structures, or full BLI sensorgram tables released; only selected sensorgram plots and trajectory summaries in the 183-page PDF.",
+  "methods": {
+    "datasets": "In silico: classic protein/nucleic-acid/small-molecule binder targets, MotifBench (30 motifs), CATH PDB domains (399-400), RCSB PDB & AFDB monomers/multimers, SAbDab antibodies, PoseBusters, SCARPiNo, ProteinGym, Mega-Scale, BindingGYM, Open AlphaSeq. Wet lab (Onava AI): 5 de novo minibinder targets (PD-L1, IL-7Ra, TrkA, VEGF-A, IL-17A), nonpublic minibinder backbones (PD-L1, IL-7Ra, PD-1, VEGF-A, MDM2), nonpublic IL-4Ra VHH complexes (ESMC Binder parents), and 6 therapeutic PD-1/PD-L1 antibodies.",
+    "evaluation_protocol": "Sections 2-4 allow GPT to write and execute arbitrary Python code (including RDKit + MMFF in blind docking) without internet or pretrained protein models; Section 5 (variant effect, 50-variant ranking) forbids code tools. All wet-lab campaigns use pre-release GPT-6.2 filtered through a 3-model ensemble (ESMFold2 + Boltz-2 + OpenDDE; >=2/3 passing ipSAE >= 0.50 and RMSD cuts); de novo minibinders assign all sequences with SolubleMPNN (8/backbone).",
+    "controls_included": "SE(3) rotation/translation invariance test on 252 inverse-folding assemblies (Pearson r=0.957), molecular-context ablation (+/- partner), uniform random mutation control for 75-85% redesign, withheld parental sequences on nonpublic backbones in wet lab, and plate control binders in BLI. No temporal cutoff, no homology split, and no matched wet-lab baseline (RFdiffusion/MPNN through the same 3-model filter).",
+    "compute_and_tools": "Unmatched test-time token budgets and Python optimization scripts (e.g., 120,000 CDR draws in 1CIC, 980 docking starts in 1BGS, RDKit + MMFF in blind docking) vs single-pass specialist baselines; Fig 7C explicitly notes settings are not compute matched.",
+    "metrics": "In silico: ipTM, ipSAE, scRMSD, motif RMSD, TM-score, lDDT, DockQ, ligand RMSD, torsion MAE, Spearman rho. Wet lab: primarily single-dose 1 uM cell-free Gator BLI hit rate plus limited multi-concentration BLI dose-response curves.",
+    "wet_lab_protocol": "Twist DNA synthesis, Onava cell-free expression, single-dose 1 uM Gator BLI screening (1:1 fit; calibrated across 289 historical matched hits at Pearson r=0.61, Spearman r_s=0.66, median 3.04-fold error, Appendix B.5), with selected follow-up 2-fold serial-dilution BLI titrations."
+  },
+  "key_results": [
+    {
+      "claim_id": "gpt6_wetlab_nonpublic_inverse_folding",
+      "task": "inverse_folding",
+      "regime": "hybrid_generation_plus_oracle_filter",
+      "benchmark": "Nonpublic minibinder & IL-4Ra VHH backbones (Onava wet lab, 1 uM BLI)",
+      "metric": "Single-dose BLI hit rate & dose-response KD",
+      "llm_model": "Pre-release GPT-6.2 + 3-model oracle filter (ESMFold2/Boltz-2/OpenDDE)",
+      "llm_score": "123 minibinder hits across 5 targets (MDM2 75/88=85.2%, VEGF-A 26/42=61.9%, IL-7Ra 5/18, PD-1 8/59, PD-L1 9/89; 38 hits at 30-50% parent ID); 128/182 (70.3%) IL-4Ra VHH hits (median 46.0% CDR ID; VHH 054/150 KD 10.3-21.8 nM at 17/25 mutations)",
+      "baseline_model": "No matched wet-lab ProteinMPNN / AbMPNN control",
+      "baseline_score": "Not run",
+      "wet_lab": true,
+      "evidence_strength": "suggestive_confounded",
+      "notes": "Strongest evidence in the paper: nonpublic backbones rule out parental binder memorization, and 17/25 CDR mutations retain 10-22 nM binding. Confounded by heavy 3-model ensemble filtering (9,902 VHHs passing ESMFold2 distilled to 184 tested), single-dose BLI noise, and missing matched MPNN wet-lab control."
+    },
+    {
+      "claim_id": "gpt6_wetlab_denovo_minibinders",
+      "task": "backbone_and_binder_design",
+      "regime": "hybrid_generation_plus_oracle_filter",
+      "benchmark": "5 protein targets (PD-L1, IL-7Ra, TrkA, VEGF-A, IL-17A), 1 uM BLI",
+      "metric": "Single-dose BLI hit rate (322 designs)",
+      "llm_model": "Pre-release GPT-6.2 backbones + SolubleMPNN sequences + 3-model oracle filter",
+      "llm_score": "35/322 (10.9%): IL-17A 18/45 (40.0%, best KD 1.21 nM), VEGF-A 8/46 (17.4%), PD-L1 5/92 (5.4%), IL-7Ra 3/93 (3.2%), TrkA 1/46 (2.2%)",
+      "baseline_model": "No matched wet-lab RFdiffusion + SolubleMPNN control",
+      "baseline_score": "Not run",
+      "wet_lab": true,
+      "evidence_strength": "suggestive_confounded",
+      "notes": "Demonstrates code-generated backbones can yield nM binders, but SolubleMPNN designed all sequences and a 3-model specialized oracle ensemble selected candidates with no matched RFdiffusion wet-lab baseline."
+    },
+    {
+      "claim_id": "gpt6_monomer_folding_gap",
+      "task": "structure_prediction",
+      "regime": "intrinsic_with_code",
+      "benchmark": "RCSB PDB and AFDB monomer folding",
+      "metric": "Mean TM-score / Mean lDDT",
+      "llm_model": "OpenAI internal model (highest budget)",
+      "llm_score": "TM-score 0.38 (PDB) / 0.25 (AFDB); lDDT 0.40 / 0.38",
+      "baseline_model": "ESMFold2",
+      "baseline_score": "TM-score 0.928 (PDB) / 0.796 (AFDB); lDDT 0.943 / 0.941",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "Clear negative finding: despite code execution and potential PDB/AFDB exposure, global de novo structure prediction remains far behind specialized folding models."
+    },
+    {
+      "claim_id": "gpt6_blind_docking_posebusters_scarpino",
+      "task": "docking",
+      "regime": "intrinsic_with_code",
+      "benchmark": "PoseBusters and SCARPiNo blind small-molecule docking (with sidechains)",
+      "metric": "Median ligand RMSD / success <= 2 A",
+      "llm_model": "OpenAI internal model (with RDKit + MMFF scripts)",
+      "llm_score": "0.34 A (PoseBusters) / 0.43 A (SCARPiNo); Scarpino 97.2% success (GPT-6.2 92.1%, GPT-6 91.1%, GPT-5.6 34.1%)",
+      "baseline_model": "DiffDock-L",
+      "baseline_score": "1.89 A (PoseBusters) / 1.27 A (SCARPiNo); Scarpino 59.9%",
+      "wet_lab": false,
+      "evidence_strength": "unverified_leaked",
+      "notes": "No cutoff or homology audit; Section 6.3.4 explicitly shows pocket/cofactor recall (Ala80 kinase hinge in 6ZCY, Mg/ANP in 7UY4) plus supplied covalent Cys attachments in SCARPiNo and unmatched RDKit + MMFF optimization vs single-pass DiffDock-L."
+    },
+    {
+      "claim_id": "gpt6_in_silico_inverse_folding_pdb_afdb",
+      "task": "inverse_folding",
+      "regime": "intrinsic_with_code",
+      "benchmark": "RCSB PDB and AFDB inverse folding (Fig 10)",
+      "metric": "Native sequence recovery / refolded TM-score",
+      "llm_model": "OpenAI internal model",
+      "llm_score": "Approaches ~95-100% recovery on AFDB and near 1.0 on many PDB entries; refold TM-score comparable or slightly below ProteinMPNN",
+      "baseline_model": "ProteinMPNN",
+      "baseline_score": "Recovery 0.506 (PDB) / 0.425 (AFDB); refold TM-score 0.910 / 0.728",
+      "wet_lab": false,
+      "evidence_strength": "unverified_leaked",
+      "notes": "Section 3.1.1 explicitly attributes near-1.0 PDB recovery to memorization (with worse self-consistency) and 95-100% AFDB recovery to exploiting AlphaFold relaxation geometry artifacts; Section 6.2.1 documents template pasting."
+    },
+    {
+      "claim_id": "gpt6_variant_effect_proteingym",
+      "task": "variant_effect_zero_shot",
+      "regime": "intrinsic_text_only",
+      "benchmark": "ProteinGym, Mega-Scale, BindingGYM, Open AlphaSeq (50-variant ranking, no code)",
+      "metric": "Mean Spearman",
+      "llm_model": "GPT-6.2 and OpenAI internal models",
+      "llm_score": "Substantially above ESM2-650M across all four benchmarks (Fig 27; exact scalar table omitted)",
+      "baseline_model": "ESM2-650M zero-shot likelihood",
+      "baseline_score": "Below GPT-6.2 / internal models (Fig 27)",
+      "wet_lab": false,
+      "evidence_strength": "unverified_leaked",
+      "notes": "All four benchmarks predate GPT-6 training cutoffs with no post-cutoff holdout; Section 5.1 concedes models may have seen related sequences or measurements, breaking zero-shot parity with ESM2-650M."
+    },
+    {
+      "claim_id": "gpt6_multimer_holo_docking",
+      "task": "docking",
+      "regime": "intrinsic_with_code",
+      "benchmark": "RCSB PDB multimers & SAbDab antibody-antigen rigid-body docking",
+      "metric": "Mean DockQ / GlobalDockQ (bound holo chains)",
+      "llm_model": "OpenAI internal model",
+      "llm_score": "0.96 (Ab-Ag) / 0.95 (multimer) with sidechains; 0.81 / 0.85 backbone-only",
+      "baseline_model": "None reported in Fig 24",
+      "baseline_score": "Not run",
+      "wet_lab": false,
+      "evidence_strength": "unverified_leaked",
+      "notes": "Bound (holo) reassembly of public PDB/SAbDab complexes where Section 6.3.3 explicitly documents recalling barnase-barstar, trypsin-inhibitor, SOD1, and toxin pentamer biology."
+    }
+  ],
+  "confounder_audit": {
+    "temporal_cutoff": {
+      "status": "evidenced_concern",
+      "evidence": "Zero temporal cutoffs or post-cutoff computational holdouts appear anywhere in the 183-page PDF (`cutoff`, `leak`, `contamination`, `training data` each have 0 hits); Section 3.1.1 concedes generalization must be tested on unseen nonpublic structures but does not run that computational test."
+    },
+    "homology_overlap": {
+      "status": "uncontrolled",
+      "evidence": "No sequence or structural homology stratification against training corpora is reported on PDB, AFDB, SAbDab, PoseBusters, SCARPiNo, or DMS benchmarks; wet-lab inverse folding uses nonpublic binder backbones on well-known human targets."
+    },
+    "cross_modal_literature_recall": {
+      "status": "evidenced_concern",
+      "evidence": "Section 6 explicitly documents recalling protein families, templates, and exact pocket chemistry from pretraining: sequence prefix/template pasting (Sec 6.2.1), barnase-barstar/trypsin-inhibitor/SOD1 docking (Sec 6.3.3), Ala80 kinase hinge and Mg/ANP pockets in blind docking (Sec 6.3.4), and exact cofactor distances in 2WJH (Sec 6.3.1)."
+    },
+    "preprocessing_artifacts": {
+      "status": "evidenced_concern",
+      "evidence": "Section 3.1.1 (p. 17) admits the internal model recovered 95-100% of AFDB sequences by detecting AlphaFold relaxation geometry artifacts; multimer docking uses bound (holo) crystal conformations (Sec 4.2)."
+    },
+    "downstream_oracle_filtering": {
+      "status": "evidenced_concern",
+      "evidence": "All wet-lab campaigns filter thousands of designs (e.g., 9,902 passing VHHs, 10,105 passing antibody redesigns with pass rates down to 0.14%) through a 3-model specialized oracle ensemble (ESMFold2 + Boltz-2 + OpenDDE, Sec 8.3), and SolubleMPNN designs all de novo minibinder sequences (Sec 2.5)."
+    },
+    "compute_and_tool_asymmetry": {
+      "status": "evidenced_concern",
+      "evidence": "GPT writes and executes iterative Python search scripts (120,000 loop draws in 1CIC, 980 starts in 1BGS, RDKit + MMFF minimization in blind docking, footnote 2 p. 47) at unmatched completion-token budgets (Fig 7C admits settings are not compute matched) vs single-pass specialists."
+    },
+    "baseline_fairness": {
+      "status": "evidenced_concern",
+      "evidence": "No matched wet-lab control (RFdiffusion/ProteinMPNN/AbMPNN through the same 3-model filter and Onava BLI assay); in silico 75-85% redesign compares only against uniform random mutations (Sec 3.1.4); ProteinGym compares potentially exposed GPT-6 only to zero-shot ESM2-650M; undefined 'internal models' drive most computational wins."
+    },
+    "data_and_wetlab_transparency": {
+      "status": "evidenced_concern",
+      "evidence": "Most headline wet-lab hit rates are single-dose 1 uM cell-free BLI (Appendix B.5 calibration: r=0.61, r_s=0.66, 3.04-fold median error) with only a few dose-response traces shown and censored <1 pM fits; no sequences, structures, code, or raw sensorgrams are released, and 'internal models' are completely undisclosed."
+    }
+  },
+  "critiques_and_commentary": [
+    {
+      "author": "Anthony Gitter",
+      "date": "2026-11-25",
+      "source_type": "x_thread",
+      "url": "https://x.com/anthonygitter/status/2125371133625020552",
+      "summary": "17-post critique questioning unaudited training-data overlap across PoseBusters/SCARPiNo (~100%), AFDB inverse folding (~100%), and ProteinGym; contrasting with PG-LLM, Rowan, Hallee FLIP2 controls, Boltz binder evaluation standards, and Anthropic's open data release; highlighting opaque internal models and sparse single-replicate BLI reporting."
+    }
+  ],
+  "takeaway": "OpenAI's GPT-6 preprint demonstrates genuine natural-language steerability and real wet-lab binding hits on nonpublic inverse-folding backbones (including 10-22 nM IL-4Ra VHHs with 17/25 CDR mutations), while confirming global monomer folding remains weak (TM-score 0.25-0.38 vs ESMFold2 0.80-0.93). However, near-100% computational scores on docking, inverse folding, and ProteinGym are fatally confounded by unaudited leakage, documented template/pocket recall, AFDB relaxation artifacts, RDKit/MMFF search asymmetry, and undisclosed internal models, and all wet-lab campaigns lack matched RFdiffusion/MPNN controls through the same 3-model specialized oracle filter."
+}

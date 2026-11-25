@@ -1,0 +1,138 @@
+{
+  "id": "tu_chen_2026_bioseq_probe",
+  "title": "Claude Was Trained on Protein Sequences at Scale (LLM-bioseq-probe)",
+  "short_label": "Tu & Chen 2026 (Bioseq Probe)",
+  "authors": "Xinming Tu and Leo Tianlai Chen",
+  "date": "2026-11-17",
+  "updated_date": "2026-11-20",
+  "source_tier": "blog_repo",
+  "read_depth": "full_post_and_code",
+  "urls": [
+    "https://xinmingtu.cn/blog/2026/claude-opus-5-5-protein-sequences/",
+    "https://github.com/XinmingTu/LLM-bioseq-probe"
+  ],
+  "tasks": [
+    "sequence_recall",
+    "structure_prediction"
+  ],
+  "regimes": [
+    "intrinsic_text_only"
+  ],
+  "models_tested": [
+    "Claude Fable 5.2",
+    "Claude Opus 5.5",
+    "Claude Fable 5.1",
+    "Claude Opus 5 / 4.8 / 4.7 / 4.6 / 4.5",
+    "GPT-6.2 Sol / Astra, GPT-6.1 Sol, GPT-6 Astra, GPT-5.5",
+    "Gemini 4 Carbon, Gemini 2.5 Pro",
+    "DeepSeek V4.1 Flash, Qwen 3.8, Kimi K3.1 Pro, GLM-5.3, MiniMax M3, gpt-oss-120b, Nemotron 3 Ultra"
+  ],
+  "plm_baselines": [
+    "ProGen3-3B",
+    "ProtGPT3-10B",
+    "ProtGPT3-1.3B",
+    "ProtGPT2",
+    "ESMC-600M",
+    "ESM3-open 1.4B",
+    "ESM-2 650M (prefix-only and bidirectional)",
+    "Prot-xLSTM 102M"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "MIT-licensed repository with test sets, evaluation scripts, gzipped raw JSONL model replies, and figure code.",
+  "methods": {
+    "datasets": "Main set: 668 unreviewed TrEMBL bacterial/archaeal proteins from 167 Pfam Domains of Unknown Function (no PDB structure, <=3 Europe PMC hits, UniRef90 singletons, 5 cuts/protein = 3,340 cuts). Family-size set: +90 smaller families (257 total). Post-cutoff set (Appendix G): 56 RefSeq proteins first public 2-27 Aug 2026 with <50% UniRef50 identity to earlier clusters (34-49% closest relative). Contact maps (Appendix H): 46 post-Aug-2026 PDBs (only 2 strictly clean) + 6 controls.",
+    "evaluation_protocol": "Prefix-only next-amino-acid completion (model outputs 10 AAs; 1st AA scored) paired with accession-seeded shuffled copies at identical cut sites. Temperature 0 where accepted, lowest thinking, no tools, 1 sample/cut.",
+    "controls_included": "Shuffled composition-matched controls, 128 zero-paper Pfam families, family-size scaling across 257 families, strict post-cutoff <50% identity RefSeq holdout (Appendix G), and copy-then-continue check.",
+    "compute_and_tools": "Zero external tools; thinking tokens appeared in only 9% of Fable 5.2 replies (non-thinking scored higher: 54.7% vs 48.2%). Total API cost ~$730.",
+    "metrics": "Family-mean real-minus-shuffled next-AA accuracy gap (percentage points) with 10,000-resample 95% bootstrap CI and Spearman r vs log(family size); top-N long-range contact precision (|i-j| >= 24, Cb <= 8 A).",
+    "wet_lab_protocol": "None (computational sequence-modeling and contact-map probe)."
+  },
+  "key_results": [
+    {
+      "claim_id": "tu_chen_duf_next_aa",
+      "task": "sequence_recall",
+      "regime": "intrinsic_text_only",
+      "benchmark": "668 TrEMBL DUF proteins (167 families, 3,340 cuts)",
+      "metric": "Real minus shuffled next-AA accuracy (pp, 95% CI)",
+      "llm_model": "Claude Fable 5.2 / Opus 5.5 (vs GPT/Gemini/open LLMs)",
+      "llm_score": "Fable 5.2 +45.1 (42.5 to 47.6; 54.1% vs 9.0%); Opus 5.5 +27.4; GPT/Gemini/open LLMs -0.0 to +2.9",
+      "baseline_model": "ProGen3-3B / ProtGPT3-10B / ESM-2 650M (bidir)",
+      "baseline_score": "ProGen3-3B +32.5; ProtGPT3-10B +27.7; ESMC-600M +13.0 (prefix); ESM-2 650M +7.0 (prefix) / +34.6 (bidir)",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "Holds in 128 zero-paper families (+45.9 Fable 5.2) and scales with family size (Spearman 0.38-0.50), providing strong controlled evidence of large-scale protein sequence pretraining in Claude 5.2/5.5."
+    },
+    {
+      "claim_id": "tu_chen_postcutoff_refseq",
+      "task": "sequence_recall",
+      "regime": "intrinsic_text_only",
+      "benchmark": "56 post-cutoff Aug 2026 RefSeq proteins (<50% UniRef50 ID)",
+      "metric": "Real minus shuffled next-AA accuracy (pp)",
+      "llm_model": "Claude Fable 5.2 / Claude Opus 5.5 / GPT-6.2 Sol",
+      "llm_score": "Fable 5.2 +22.1; Opus 5.5 +13.4; GPT-6.2 Sol -0.4",
+      "baseline_model": "ProGen3-3B / ProtGPT3-10B",
+      "baseline_score": "ProGen3-3B +12.0; ProtGPT3-10B +6.7",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "Rules out exact sequence memorization as the sole explanation; generalizes across <50% identity family relatives."
+    },
+    {
+      "claim_id": "tu_chen_contact_maps",
+      "task": "structure_prediction",
+      "regime": "intrinsic_text_only",
+      "benchmark": "46 post-Aug-2026 PDB structures (Appendix H)",
+      "metric": "Top-N long-range contact precision (|i-j| >= 24)",
+      "llm_model": "Claude Fable 5.2",
+      "llm_score": "~25% (vs 3% chance)",
+      "baseline_model": "ESM-2 650M (at Fable's N)",
+      "baseline_score": "~67%",
+      "wet_lab": false,
+      "evidence_strength": "suggestive_confounded",
+      "notes": "44/46 post-Aug-2026 PDBs had pre-cutoff sequences or earlier PDB homologs, leaving only 2 strictly clean targets; Fable trails ESM-2 650M substantially."
+    }
+  ],
+  "confounder_audit": {
+    "temporal_cutoff": {
+      "status": "controlled",
+      "evidence": "Appendix G specifically tests 56 RefSeq proteins first public 2-27 Aug 2026 after assumed July 2026 cutoff (+22.1 pp for Fable 5.2); Appendix H contact maps note only 2/46 targets are strictly clean."
+    },
+    "homology_overlap": {
+      "status": "controlled",
+      "evidence": "Main set uses UniRef90 singletons; Appendix G enforces <50% identity to earlier UniRef50 clusters (closest earlier relative 34-49%)."
+    },
+    "cross_modal_literature_recall": {
+      "status": "controlled",
+      "evidence": "Unreviewed TrEMBL DUF families with no PDB structures and <=3 Europe PMC hits; 128 zero-paper families score +45.9 pp (Spearman 0.05 vs paper count)."
+    },
+    "preprocessing_artifacts": {
+      "status": "controlled",
+      "evidence": "Composition-matched shuffled controls, repeat consistency check (57.5% vs 57.5%), 0.1% non-answer rate, and copy-then-continue control; Fable 5 excluded due to 44% policy blocks."
+    },
+    "downstream_oracle_filtering": {
+      "status": "not_applicable",
+      "evidence": "Pure intrinsic next-residue and contact-list outputs."
+    },
+    "compute_and_tool_asymmetry": {
+      "status": "controlled",
+      "evidence": "Zero tools, temp 0, minimal thinking; non-thinking Fable 5.2 replies outperformed thinking replies (54.7% vs 48.2%)."
+    },
+    "baseline_fairness": {
+      "status": "controlled",
+      "evidence": "Autoregressive pLMs (ProGen3-3B, ProtGPT3-10B) receive identical prefix-only context; masked ESM-2 650M evaluated both prefix-only (+7.0) and bidirectional (+34.6)."
+    },
+    "data_and_wetlab_transparency": {
+      "status": "controlled",
+      "evidence": "All data, scripts, raw JSONL outputs, and figure code released under MIT license."
+    }
+  },
+  "critiques_and_commentary": [
+    {
+      "author": "Hacker News discussion",
+      "date": "2026-11-18",
+      "source_type": "forum",
+      "url": "https://news.ycombinator.com/item?id=50541619",
+      "summary": "Debated whether shuffled sequences are a sufficient baseline control vs Markov/di-residue controls; authors noted composition and copy-then-continue checks plus family-size scaling."
+    }
+  ],
+  "takeaway": "Claude Fable 5.2 (+45.1 pp main, +22.1 pp on post-cutoff <50%-identity RefSeq proteins) and Opus 5.5 (+27.4 / +13.4 pp) match or exceed open autoregressive pLMs (ProGen3-3B +32.5 / +12.0) on unstudied DUF proteins while GPT-6, Gemini 4, and open-weight LLMs stay near zero. On long-range contact maps, however, Fable 5.2 (~25%) trails ESM-2 650M (~67%) and only 2 of 46 targets are strictly free of pre-cutoff sequence/PDB relatives."
+}

@@ -1,0 +1,55 @@
+{
+  "id": "swanson_2025_virtual_lab",
+  "title": "The Virtual Lab of AI Agents Designs New SARS-CoV-2 Nanobodies",
+  "short_label": "Swanson et al. 2025 (Virtual Lab)",
+  "authors": "Kyle Swanson, Wesley Wu, Nash L. Bulaong, John E. Pak, James Zou",
+  "date": "2025-07-01",
+  "updated_date": "",
+  "source_tier": "peer_reviewed",
+  "read_depth": "queued_unread",
+  "urls": [
+    "https://doi.org/10.1038/s41586-025-09442-9",
+    "https://doi.org/10.1101/2024.11.12.623405"
+  ],
+  "tasks": [
+    "backbone_and_binder_design"
+  ],
+  "regimes": [
+    "tool_orchestrated_agent"
+  ],
+  "models_tested": [
+    "LLM multi-agent Virtual Lab (pending full PDF read)"
+  ],
+  "plm_baselines": [
+    "ESM, AlphaFold-Multimer, Rosetta orchestrated in pipeline (pending full PDF read)"
+  ],
+  "wet_lab_validated": true,
+  "code_and_data_released": "Unverified (queued unread).",
+  "methods": {
+    "datasets": "SARS-CoV-2 nanobody design (pending full PDF read).",
+    "evaluation_protocol": "Multi-agent LLM team orchestrating ESM, AlphaFold-Multimer, and Rosetta (pending full PDF read).",
+    "controls_included": "Pending full PDF read.",
+    "compute_and_tools": "Pending full PDF read.",
+    "metrics": "Pending full PDF read.",
+    "wet_lab_protocol": "Wet-lab nanobody binding validation reported in Nature 2025 (pending full PDF read)."
+  },
+  "key_results": [
+    {
+      "claim_id": "virtual_lab_queued",
+      "task": "backbone_and_binder_design",
+      "regime": "tool_orchestrated_agent",
+      "benchmark": "SARS-CoV-2 nanobody design",
+      "metric": "Pending full PDF read",
+      "llm_model": "Virtual Lab AI agents",
+      "llm_score": "Pending full PDF read",
+      "baseline_model": "Pending full PDF read",
+      "baseline_score": "Pending full PDF read",
+      "wet_lab": true,
+      "evidence_strength": "queued",
+      "notes": "Nature paywall / bioRxiv HTTP 429; queued without critique until full text is read."
+    }
+  ],
+  "confounder_audit": {},
+  "critiques_and_commentary": [],
+  "takeaway": "Queued unread (Nature paywall / bioRxiv HTTP 429 on 2026-11-25): multi-agent LLM orchestration of ESM/AlphaFold-Multimer/Rosetta for SARS-CoV-2 nanobodies; excluded from critiques until full text is verified."
+}

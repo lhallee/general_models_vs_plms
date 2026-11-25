@@ -1,0 +1,88 @@
+{
+  "id": "zeng_2025_bolt_amp",
+  "title": "Large Scale Multi-Task Bayesian Optimization with Large Language Models (BOLT)",
+  "short_label": "Zeng et al. 2025 (BOLT AMP)",
+  "authors": "Yimeng Zeng, Natalie Maus, Haydn Thomas Jones, Jeffrey Tao, Fangping Wan, Marcelo Der Torossian Torres, Cesar de la Fuente-Nunez, Ryan Marcus, Osbert Bastani, Jacob R. Gardner",
+  "date": "2025-03-11",
+  "updated_date": "2025-06-12",
+  "source_tier": "preprint",
+  "read_depth": "full_text",
+  "urls": [
+    "https://arxiv.org/abs/2503.08131"
+  ],
+  "tasks": [
+    "variant_effect_few_shot"
+  ],
+  "regimes": [
+    "finetuned_llm",
+    "hybrid_generation_plus_oracle_filter"
+  ],
+  "models_tested": [
+    "GPT-4o-mini-0718 (iteratively fine-tuned)"
+  ],
+  "plm_baselines": [
+    "None (baselines are LOL-BO/STBO with peptide VAE, DKT/FSBO, POGPE, SGPE, Optformer, LLAMBO)"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "Unfilled 'GitHub: placeholder' (Sec 4); zero scalar numerical tables for AMP results (plots only).",
+  "methods": {
+    "datasets": "1,000 extinct antimicrobial seed peptides (Wan et al. 2024; 100 held out for validation at >=25% Levenshtein distance, i.e., up to 75% sequence identity), minimizing APEX-predicted MIC against A. baumannii.",
+    "evaluation_protocol": "Outer loop iteratively fine-tunes GPT-4o-mini (7 rounds) on top trajectories from 200,000-call constrained latent-space LOL-BO runs plus self-augmented sequences (APEX MIC < 8); inner loop uses LLM initialization or few-shot sampling.",
+    "controls_included": "Untuned BOLT-0 check (fails), multi-task GP baselines (DKT/FSBO, POGPE, SGPE) trained on 5-50 STBO trajectories.",
+    "compute_and_tools": "~25,000 GPU hours + OpenAI fine-tuning across ~800-900 tasks (200k APEX oracle calls/task), vs LLAMBO capped at 10M tokens (<100 steps) and GP experts capped at <=50 trajectories.",
+    "metrics": "Summed normalized APEX-predicted MIC and average predicted MIC vs sample count (Figs 1-2 right; no scalar tables).",
+    "wet_lab_protocol": "None (APEX ML predictor only)."
+  },
+  "key_results": [
+    {
+      "claim_id": "bolt_amp_apex_plots",
+      "task": "variant_effect_few_shot",
+      "regime": "finetuned_llm",
+      "benchmark": "100 validation extinct AMP peptides (APEX predicted MIC, Figs 1-2)",
+      "metric": "Summed / mean APEX-predicted MIC (plots only, no scalar table)",
+      "llm_model": "BOLT (7-round fine-tuned GPT-4o-mini on ~800-900 LOL-BO trajectories)",
+      "llm_score": "LLM initialization and 1-1,000 few-shot samples outperform 200,000-call STBO, DKT/FSBO, POGPE, SGPE, Optformer, LLAMBO in Figs 1-2",
+      "baseline_model": "STBO / DKT/FSBO (10-50 tasks) / POGPE & SGPE (5-20 experts); no pLM/AMP baseline",
+      "baseline_score": "Plot-only (no scalar table)",
+      "wet_lab": false,
+      "evidence_strength": "suggestive_confounded",
+      "notes": "Severe training-task imbalance vs GP baselines (~800-900 vs 5-50 trajectories), <=75% train/val peptide identity, APEX ML surrogate without wet-lab MIC, no pLM/AMP baseline, and no scalar AMP tables."
+    }
+  ],
+  "confounder_audit": {
+    "temporal_cutoff": {
+      "status": "evidenced_concern",
+      "evidence": "GPT-4o-mini-0718 coincides with/follows APEX (Wan et al. 2024) with no cutoff verification."
+    },
+    "homology_overlap": {
+      "status": "evidenced_concern",
+      "evidence": "Sec 4 enforces only >=25% Levenshtein distance (allowing up to 75% sequence identity) between validation and training peptides."
+    },
+    "cross_modal_literature_recall": {
+      "status": "evidenced_concern",
+      "evidence": "Prompt injects AMP domain priors ('positive charge, hydrophobicity, amphipathicity', Fig 5); no non-pretrained transformer control on peptides."
+    },
+    "preprocessing_artifacts": {
+      "status": "evidenced_concern",
+      "evidence": "Strips non-AA characters silently, omits 75%-similarity violation rates, has 800 vs 900 train-set count discrepancy, and omits all scalar AMP tables."
+    },
+    "downstream_oracle_filtering": {
+      "status": "evidenced_concern",
+      "evidence": "Relies solely on APEX ML predictor for 200,000 BO calls/task, self-augmentation filtering (MIC < 8), and evaluation without wet-lab MIC assays."
+    },
+    "compute_and_tool_asymmetry": {
+      "status": "evidenced_concern",
+      "evidence": "BOLT uses ~25,000 GPU hours + API fine-tuning across hundreds of tasks, while LLAMBO is capped at 10M tokens (<100 steps) and GP baselines at 5-50 trajectories."
+    },
+    "baseline_fairness": {
+      "status": "evidenced_concern",
+      "evidence": "Massive training-data asymmetry against multi-task GP baselines (~800-900 vs 5-50 trajectories) and zero pLM or specialized AMP baselines."
+    },
+    "data_and_wetlab_transparency": {
+      "status": "evidenced_concern",
+      "evidence": "Unfilled 'GitHub: placeholder', no wet-lab validation, and no scalar AMP metrics table."
+    }
+  },
+  "critiques_and_commentary": [],
+  "takeaway": "BOLT shows in plots that iteratively fine-tuning GPT-4o-mini on hundreds of 200,000-call LOL-BO trajectories enables strong few-shot AMP proposals on the APEX ML predictor. However, an ~18x training-task advantage over GP baselines, <=75% train/val sequence identity, missing pLM/AMP baselines, absent numerical tables, and purely surrogate-based evaluation confound the comparison."
+}

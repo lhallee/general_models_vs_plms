@@ -1,0 +1,105 @@
+{
+  "id": "kosinski_2026_checkllmfold",
+  "title": "CheckLLMfold: Contact Map, 3D Folding, Recognition, and Next-AA Audits of Claude Fable 5.2",
+  "short_label": "Kosinski 2026 (CheckLLMfold)",
+  "authors": "Jan Kosinski (code/analysis drafted with Claude Opus 5.5; contact protocol adapted from Sergey Ovchinnikov)",
+  "date": "2026-11-18",
+  "updated_date": "2026-11-18",
+  "source_tier": "blog_repo",
+  "read_depth": "full_post_and_code",
+  "urls": [
+    "https://github.com/jkosinski/CheckLLMfold",
+    "https://x.com/jankosinski/status/2122997527192416440"
+  ],
+  "tasks": [
+    "structure_prediction",
+    "sequence_recall",
+    "protein_qa_and_reasoning"
+  ],
+  "regimes": [
+    "intrinsic_with_code",
+    "intrinsic_text_only"
+  ],
+  "models_tested": [
+    "Claude Fable 5.2 (headless claude -p, high effort for folding, low effort for oneshot/nextaa)"
+  ],
+  "plm_baselines": [
+    "ProGen3-3B, ProtGPT3-10B (re-analyzed from Tu & Chen nextaa outputs); AFDB used as ground truth for 3 bacterial DUFs"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "MIT-licensed GitHub repository with summary.tsv, transcripts, rebuilt PDBs, prompts, and nextaa scripts; README warns repo text/code was AI-drafted without thorough human audit.",
+  "methods": {
+    "datasets": "Contact/3D folding: 4 famous PDBs (1UBQ, 256B, 1TEN, 2TRX) vs 3 bacterial DUF proteins with confident AFDB models and zero PDB relatives (A0A916UKZ0/DUF2489, A0A8J2YCU1/DUF2958, A0A5D0P002/DUF4288). Next-AA: 1,428 headless calls across 12 famous proteins, Tu & Chen UniRef50 cluster-size bins, and 48 new proteins (70-95% ID to old UniProtKB relatives, 192 divergent sites).",
+    "evaluation_protocol": "Headless OS-sandboxed claude -p (no network, randomized job directories) running Ovchinnikov's iterative contact-list + fold() script (4-6 rounds), compared against single-reply no-tools oneshot.py and direct recognition probes (6 calls/protein).",
+    "controls_included": "No-PDB-relative Foldseek/RCSB-filtered DUF targets, single-reply no-tools ablation, randomized directory names (after discarding a leaked ubiquitin path run), direct recognition probe, AFDB confidence re-scoring (pLDDT>=90, PAE<5 A), and old-vs-new homolog divergence test.",
+    "compute_and_tools": "$1.14 to $3.91/run in iterative fold() mode (166-352 s) vs ~1,400 thinking tokens in single-reply no-tools mode (matching full protocol precision).",
+    "metrics": "Long-range contact precision P_sep24_topL, medium+long P_sep6_topL, rebuilt CA TM_best_hand vs fold() ceiling on native contacts; next-AA real-minus-shuffled gap and old-vs-new divergent residue accuracy.",
+    "wet_lab_protocol": "None (computational contact/folding/memorization audit)."
+  },
+  "key_results": [
+    {
+      "claim_id": "checkllmfold_pdb_vs_duf_contacts",
+      "task": "structure_prediction",
+      "regime": "intrinsic_with_code",
+      "benchmark": "4 famous PDBs (1UBQ, 256B, 1TEN, 2TRX) vs 3 no-PDB-relative bacterial DUFs",
+      "metric": "Long-range top-L contact precision (|i-j|>=24) / TM_best_hand",
+      "llm_model": "Claude Fable 5.2 (full fold() protocol & single-reply oneshot)",
+      "llm_score": "Famous PDBs: P_sep24_topL 0.179-0.684, TM 0.325-0.524 (6/6 exact PDB ID recognized); No-PDB DUFs: DUF2489 0.037-0.056 (TM 0.21-0.22), DUF2958 0.043-0.068 (TM 0.20), DUF4288 0.075-0.327 (TM 0.24-0.31)",
+      "baseline_model": "Chance contact density (0.022-0.064) / fold() native-contact ceiling (TM 0.61-0.84)",
+      "baseline_score": "DUF2489 chance 0.022, DUF2958 chance 0.052, DUF4288 chance 0.032",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "Clean confounder audit: Fable's contact accuracy tracks PDB memorization (naming all 4 famous PDB IDs 6/6 and even hardcoding Tenascin FN3 strand labels A-G skipping D in scripts) and collapses near chance on 2 of 3 no-PDB-relative DUFs; single-reply no-tools matches iterative fold()."
+    },
+    {
+      "claim_id": "checkllmfold_nextaa_divergence_test",
+      "task": "sequence_recall",
+      "regime": "intrinsic_text_only",
+      "benchmark": "48 new proteins (70-95% ID to old UniProtKB relatives, 192 sites) + UniRef50 cluster-size re-analysis",
+      "metric": "Old-relative vs new-protein residue prediction at divergent sites",
+      "llm_model": "Claude Fable 5.2",
+      "llm_score": "At divergent sites where old relative is known (n=29): predicts OLD relative 59% vs NEW residue 7%; Tu & Chen gap scales from +54.1 (UniRef50 >50) to +36.4 (cluster=1) to +22.1 (post-cutoff)",
+      "baseline_model": "ProGen3-3B / ProtGPT3-10B (Tu & Chen re-analysis)",
+      "baseline_score": "ProGen3-3B +47.1 (>50) -> +23.8 (cluster=1) -> +12.0 (post-cutoff)",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "Directly shows Fable 5.2 predicts from remembered UniProt family relatives (59% old relative vs 7% new divergence) while scaling like a protein language model across UniRef50 cluster sizes."
+    }
+  ],
+  "confounder_audit": {
+    "temporal_cutoff": {
+      "status": "controlled",
+      "evidence": "Explicitly contrasts pre-cutoff famous PDBs, no-PDB-relative DUFs, and post-cutoff new proteins diverging from old UniProtKB relatives (59% old vs 7% new)."
+    },
+    "homology_overlap": {
+      "status": "controlled",
+      "evidence": "Uses RCSB seqsearch + Foldseek to verify zero PDB relatives for the 3 DUFs (best TM 0.52-0.60, E=0.52-1.1) and stratifies nextaa by UniRef50 cluster size."
+    },
+    "cross_modal_literature_recall": {
+      "status": "controlled",
+      "evidence": "Directly measured via recognition probes (4/4 famous PDBs named 6/6; DUFs 0/6 accession, 2/6-6/6 Pfam) and script inspection (catching Tenascin FN3 strand-label recall)."
+    },
+    "preprocessing_artifacts": {
+      "status": "evidenced_concern",
+      "evidence": "README transparently warns code and text were AI-drafted by Opus 5.5 without thorough human review, usage-limit-stopped runs were omitted, and bacterial ground truth uses AFDB models (checked at pLDDT>=90, PAE<5 A)."
+    },
+    "downstream_oracle_filtering": {
+      "status": "not_applicable",
+      "evidence": "fold() reconstructs coordinates purely from the LLM's own contact list."
+    },
+    "compute_and_tool_asymmetry": {
+      "status": "controlled",
+      "evidence": "Directly ablates iterative fold() scripts against single-reply no-tools oneshot.py, showing equal contact precision."
+    },
+    "baseline_fairness": {
+      "status": "evidenced_concern",
+      "evidence": "No head-to-head ESM-2 / AlphaFold contact precision baseline reported alongside Fable on the 7 targets (though native-contact ceilings and chance baselines are given)."
+    },
+    "data_and_wetlab_transparency": {
+      "status": "controlled",
+      "evidence": "All scripts, summary.tsv, transcripts, and rebuilt PDBs are MIT-licensed on GitHub (with AI-drafting caveat clearly stated)."
+    }
+  },
+  "critiques_and_commentary": [],
+  "takeaway": "CheckLLMfold demonstrates that Claude Fable 5.2's contact precision on famous PDBs (0.18-0.68, TM 0.33-0.52) is heavily confounded by exact PDB recognition (6/6 PDB ID recall and hardcoded FN3 strand topology), dropping near chance on two of three no-PDB-relative bacterial DUFs (0.04-0.07, TM 0.20-0.22). Its next-residue divergence test further proves Fable relies on remembered family relatives (predicting the old homolog 59% vs the new divergent residue 7%)."
+}

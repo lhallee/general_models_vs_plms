@@ -1,19 +1,31 @@
 # General language models against protein language models
 
-General-purpose language models can now read and write protein sequences, which raises the question of whether they
-can stand in for the protein language models that the field uses to predict what a mutation does. This repository
-holds an experiment that tests one sharp form of that question on the [FLIP2](https://flip.protein.properties/)
-benchmark, a second that asks whether memory of the sequences explains the answer, a third that sets the general model
-against a generative protein language model tuned on the same variants, and a dated survey of what others have
-reported. A general model that reads 256 labeled variants in its prompt matches the standard recipe of ridge
-regression on protein language model features and does not beat it, a generative protein language model tuned on
-those variants falls short of both under the recipe set in advance and reaches their level, without passing it,
-under its best recipe, and the best predictor measured here averages the general model with the ridge.
+A **confounder-audited compilation of generalized LLM results in protein biology** paired with **controlled head-to-head
+benchmarks against protein language models (pLMs)**, organized so both humans and agents can inspect what general-purpose
+language models can currently do strictly where the evidence is rigorous.
 
-The [explainer](docs/index.html) walks through every experiment step by step for a reader outside the field, with a
-primer on each piece and one card per experiment, and it is a single HTML file with its figures inside that opens in
-any browser once the repository is downloaded or cloned. Every table and figure is in [RESULTS.md](RESULTS.md), the
-other public results are in [SURVEY.md](SURVEY.md), and the commands are in [REPRODUCE.md](REPRODUCE.md).
+- **Jump straight to our controlled experiments:** [What we found](#what-we-found), the standalone interactive
+  [Experiment Explainer](docs/index.html), [RESULTS.md](RESULTS.md), and the
+  [Expanded Post-Cutoff MaveDB Suite](POSTCUTOFF_BENCHMARK.md) (`FGFR2`, `GBA1`, `ARAF`).
+- **Explore the full 31-study literature & X compilation:** Open the offline interactive
+  [Compilation & Confounder Explorer](docs/compilation.html), read [COMPILATION.md](COMPILATION.md) /
+  [SURVEY.md](SURVEY.md), or query the structured index directly via
+  `python -m general_models_vs_plms.catalog query --rigorous-only` (`catalog/index.json`, `catalog/claims.csv`,
+  `catalog/studies.jsonl`, and per-study dossiers under `studies/`).
+
+> **Headline across our controlled experiments (updated 2026-11-25):** On the 16 FLIP2 splits (256 labeled variants),
+> Claude Mythos 5.2 in context (`0.380`) ties standard mean-pooled ESMC ridge (`0.367`) and ProGen2 preference tuning
+> (`0.360`–`0.378`), **but replacing global mean pooling with mutation-site local hidden-state pooling plus zero-shot
+> scores breaks the tie decisively in favor of pure frozen pLMs**: frozen ESMC-600M + ESMC-6B reaches **`0.457`**
+> (**+0.077 strictly above Claude Mythos 5.2**, 95% CI `+0.028` to `+0.124`), while averaging Claude Mythos 5.2 with
+> mutation-site ESMC-600M raises the hybrid ceiling to **`0.467`** (`+0.087` over Mythos 5.2 alone). Across 6 new
+> post-June-2026 MaveDB splits (`GBA1` hydrolase, `ARAF` kinase activity & abundance), stacked ESMC-6B reaches **`0.549`**
+> (+0.088 over prior post-cutoff baselines), and ConFit-style KL-anchored LoRA ESMC gains +0.053 to +0.065 over zero-shot
+> on single-site DMS (`0.512`–`0.516`) while trailing frozen local/stacked ridges under FLIP2's heavier extrapolation shift.
+
+Every table and figure from our first three experiments is in [RESULTS.md](RESULTS.md), the interactive walkthrough is in
+[docs/index.html](docs/index.html), the interactive literature audit is in [docs/compilation.html](docs/compilation.html),
+and reproduction commands are in [REPRODUCE.md](REPRODUCE.md).
 
 ## What we found
 
@@ -38,9 +50,12 @@ squares are ridges fit on the same 256 rows the model reads.*
 | ProGen2-small tuned, one setting for 20 epochs, picked after the first scores | 0.339 (0.290 to 0.379) | 0.342 (0.209 to 0.463) |
 | Best ESMC score with no examples (ESMC-6B) | 0.346 (0.298 to 0.388) | 0.481 (0.355 to 0.601) |
 | ProGen2-base tuned, the same one setting for 20 epochs | 0.360 (0.314 to 0.401) | 0.379 (0.241 to 0.499) |
-| Best ridge on ESMC features | 0.367 (0.319 to 0.409) | 0.572 (0.469 to 0.663) |
+| Best ridge on mean-pooled ESMC features | 0.367 (0.319 to 0.409) | 0.572 (0.469 to 0.663) |
 | Claude Mythos 5.2 reading the 256 rows in its prompt | 0.380 (0.333 to 0.421) | 0.561 (0.458 to 0.646) |
-| Average of the model's ranking and a ridge's | 0.443 (0.399 to 0.482) | 0.611 (0.516 to 0.692) |
+| Frozen ESMC-600M mutation-site local pooling + zero-shot ridge (single 600M pLM) | **0.429** (0.382 to 0.469) | 0.431 (0.305 to 0.543) |
+| **Pure frozen pLM: ESMC-600M + ESMC-6B mutation-site + zero-shot rank average** | **0.457** (0.410 to 0.496) | 0.496 (stacked, q300: **0.453**) |
+| Average of Claude Mythos 5.2 and old mean-pooled ESMC ridge | 0.443 (0.399 to 0.482) | 0.611 (0.516 to 0.692) |
+| **Average of Claude Mythos 5.2 and mutation-site ESMC-600M ridge** | **0.467** (0.422 to 0.505) | 0.571 (stacked 6B) |
 
 The best ridge is the one on the ESMC-600M embedding for FLIP2 and the one on one-hot features with the ESMC-6B score
 for FGFR2, and the average in the last row pairs the model with that same ridge.
@@ -160,6 +175,36 @@ the four models (-0.50, -0.64 to -0.33), so it is no general guide to where such
 The model and the ridge err on different variants, which makes the plain average of their rankings, with equal weights
 and no tuning, the best predictor measured here at 0.443 on FLIP2 and 0.611 on FGFR2.
 
+### Mutation-site ESMC pooling breaks the FLIP2 tie, and multi-family post-cutoff assays generalize beyond FGFR2
+
+A fourth experiment (`2026-11-25_esmc_adaptation_and_postcutoff`) tested why the initial ESMC ridges tied Claude Mythos
+5.2 on FLIP2 and expanded our post-June-2026 MaveDB benchmark from one kinase domain (`FGFR2`) to **three unrelated human
+protein families** (`FGFR2`, `GBA1` lysosomal hydrolase, and `ARAF` kinase activity & abundance; max pairwise ungapped
+identity <= 12.5% and <= 16.7% to FLIP2; pre-cutoff `PRKN` audited and excluded):
+
+- **Pure frozen pLMs strictly beat Claude Mythos 5.2 on FLIP2:** Global mean pooling dilutes 1 to 3 mutated sites across
+  320 to 606 unchanged residues. Extracting mutated-site hidden states (`h_mut[M]` and `h_mut[M] - h_wt[M]`) plus
+  masked-marginal zero-shot scores lifts single-model frozen ESMC-600M from `0.367` to **`0.429`** (`+0.062` over
+  `ridge_esmc_600m`), and an equal-weight rank average of frozen ESMC-600M and ESMC-6B reaches **`0.457`**
+  (`[0.410, 0.496]`), **strictly beating Claude Mythos 5.2 (`0.380`) by +0.077 (`[+0.028, +0.124]`)** with zero LLM calls
+  and zero weight fine-tuning. Shuffled-label negative controls score `+0.009` to `+0.011`. Averaging Claude Mythos 5.2
+  with mutation-site ESMC-600M raises the hybrid ceiling from `0.443` to **`0.467`** (`+0.087` over Mythos alone).
+- **Expanded 6-split post-cutoff MaveDB suite (`GBA1`, `ARAF` activity, `ARAF` abundance, all 300 queries):** A 5-fold
+  out-of-fold stacked multi-view ridge on frozen ESMC-6B (`mean_emb` + `mutsite` + `one_hot` + `zero_shot`, fit strictly
+  on the 256 context rows) reaches **`0.549`** (`[0.511, 0.582]`), strictly beating the prior FGFR2 recipe
+  (`ridge_onehot_plus_esmc_6b`, `0.461`) by **+0.088 (`[+0.051, +0.124]`)**, reaching `0.728` on `GBA1` and `0.669`
+  (ESMC-600M) on `ARAF` activity while separating `ARAF` cellular abundance (`0.363`).
+- **ConFit-style KL-anchored LoRA preference tuning of ESMC:** Rank-8 LoRA adapters initialized at exact zero-shot parity
+  (verified to 0.0002) with KL=0.1 regularization prevent ProGen2's likelihood collapse and gain **+0.053 to +0.065** over
+  zero-shot on single-site post-cutoff DMS (`confit_esmc_300m` **`0.516`**, `confit_esmc_600m` **`0.512`**), beating old
+  ridges there; under FLIP2's heavier extrapolation shift (`0.310`–`0.334`), frozen mutation-site and stacked ESMC ridges
+  (`0.414`–`0.457`) remain substantially stronger.
+- **Zero-spend open-weight general LLM pilot (`Qwen/Qwen3-14B`, BF16, direct mode):** Across `amylase/by_mutation` and
+  post-cutoff `fgfr2/random`, `Qwen3-14B` shows zero biological prior (`k0_described` `-0.121` and `+0.053`), achieves
+  pure tabular in-context regression (`k256` `+0.403` and `+0.404`, reversing to `-0.337` / `-0.372` under `k256_flipped`),
+  and is invariant to residue enciphering on post-cutoff `fgfr2/random` (`+0.404` plain vs `+0.406` cipher), cleanly
+  isolating the ~+0.25–0.30 protein prior that frontier Claude Mythos 5.2 adds on top of tabular ICL.
+
 ### Through the public API, Claude Fable 5.2 also ties its best ridge
 
 A separate experiment asked four Claude models through the public API and scored all 300 queries of each split, so its
@@ -168,12 +213,34 @@ numbers are compared only with baselines scored on those queries and are never s
 Claude Opus 5.5 (0.252), and Claude Haiku 5.5 (0.176) are below that ridge, and Claude Opus 5.5 refused 68 of its 265
 prompts at low effort.
 
-## What the field has found
+## What the field has found (31-study confounder-audited compilation)
 
-Across the public results available on 23 November 2026, general language models have reached protein language models
-that read a single sequence on ranking variants and have not passed them, while specialist predictors stay ahead. The
-table sets each result for a general model beside its protein-specific comparison, and [SURVEY.md](SURVEY.md) lists
-every source with its authors, its date, and how much of it was read, since several rows rest on an abstract alone.
+As of 25 November 2026, we maintain a structured, machine-queryable compilation of **31 studies** across peer-reviewed
+papers, arXiv/bioRxiv preprints, technical reports, primary GitHub benchmarks, X threads, and our own experiments
+(**25 audited from full text / primary data** across 8 explicit confounder and leakage axes; **6 queued unread** and
+strictly excluded from critiques; **59 indexed claims: 31 supported/controlled, 15 suggestive/confounded, 7 unverified or
+likely leaked**).
+
+- **Interactive web explorer (offline):** [docs/compilation.html](docs/compilation.html) (filter by task, evaluation
+  regime, evidence strength, source tier, model, and clickable 8-axis confounder matrix).
+- **Full compiled report & per-study dossiers:** [COMPILATION.md](COMPILATION.md), [SURVEY.md](SURVEY.md), and
+  `studies/<study_id>.md`.
+- **Agent / script interface:** `catalog/index.json`, `catalog/claims.csv`, `catalog/studies.jsonl`, or
+  `python -m general_models_vs_plms.catalog query --rigorous-only --task variant_effect_few_shot --json`.
+
+Strictly where the evidence is controlled against temporal cutoffs, homology leakage, preprocessing artifacts, and
+downstream oracle filtering, general language models:
+1. Show real sequence memorization / familiarity in Claude 5.2 models (`+45.1` pp on TrEMBL DUFs, `+22.1` pp post-cutoff
+   in Tu & Chen 2026; 76% 50%-mask rhodopsin restoration here), largely absent from GPT/Gemini/open LLMs, though
+   memorization does not explain fitness accuracy and decays sharply on post-cutoff / divergent sites (Kosinski 2026).
+2. Fall far behind specialists without tools on monomer folding (<0.50 TM vs ESMFold2 0.89), inverse folding (0.43–0.46
+   scTM vs ProteinMPNN 0.88–0.94), de novo design (0%), closed-loop binder design (0% vs BoltzGen 8.33%), blind Post-NK
+   CAFA-6 function prediction (-0.224 drop, below NetGO 4.0), and unseen interface alanine scans (Guloglu 2026; OpenAI
+   2026; Seo et al. 2026).
+3. Match standard single-sequence zero-shot and mean-pooled pLMs on variant ranking, **trail properly adapted frozen
+   mutation-site / stacked ESMC ridges on FLIP2 (`0.380` vs `0.457`)**, and deliver their clearest practical gains when
+   **combined with specialized protein models or tools** (either rank-averaged with ESMC at `0.467` here, or orchestrating
+   structure/design tools and multi-model oracle filters in Anthropic Claude Science 2026 and OpenAI 2026).
 
 | Question | General language models | Protein-specific models | Source |
 |---|---|---|---|
@@ -233,13 +300,16 @@ does not say what a tuned ESMC would score.
 
 | Path | What it holds |
 |---|---|
-| [docs/index.html](docs/index.html) | The explainer, one self-contained page |
-| [RESULTS.md](RESULTS.md) | Every table and figure |
-| [SURVEY.md](SURVEY.md) | Other public results on general language models and protein sequences, with dates and authors |
+| [docs/compilation.html](docs/compilation.html) | Interactive confounder-audited compilation explorer (offline HTML) |
+| [docs/index.html](docs/index.html) | Interactive explainer for our controlled experiments (offline HTML) |
+| [COMPILATION.md](COMPILATION.md) / [SURVEY.md](SURVEY.md) | Full 31-study confounder-audited report and 8-axis audit matrix |
+| [POSTCUTOFF_BENCHMARK.md](POSTCUTOFF_BENCHMARK.md) | Homology-audited post-June-2026 MaveDB suite (`FGFR2`, `GBA1`, `ARAF`) and zero-spend model horizon |
+| `catalog/`, `studies/` | Machine-queryable JSON/JSONL/CSV study & claim catalog and 31 per-study dossiers |
+| [RESULTS.md](RESULTS.md) | Every table and figure from our FLIP2, sequence-knowledge, and ProGen2 experiments |
 | [REPRODUCE.md](REPRODUCE.md) | The commands for the tables, the figures, and the experiments |
 | `report/figures/`, `report/tables/` | The figures, and the summary tables they are drawn from |
 | [prompts/](prompts/README.md) | Every prompt Claude Mythos 5.2 was asked, as the file it read, with its answer |
-| `general_models_vs_plms/`, `scripts/`, `tests/` | The package, the scripts of the subagent route, and the test suite |
+| `general_models_vs_plms/`, `scripts/`, `tests/` | The package (including `catalog.py`, `postcutoff_suite.py`, `esmc_adaptation.py`, `open_llm_eval.py`) and test suite |
 | `Dockerfile`, `box.sh` | The image and the entrypoint the protein language models ran through |
 
 ## Sources

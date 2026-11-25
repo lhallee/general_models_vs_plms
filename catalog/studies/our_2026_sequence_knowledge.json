@@ -1,0 +1,106 @@
+{
+  "id": "our_2026_sequence_knowledge",
+  "title": "Sequence Knowledge vs Property Prediction Error in Claude Mythos 5.2 and Masked Protein Language Models",
+  "short_label": "Hallee et al. 2026 (Seq Knowledge)",
+  "authors": "Logan Hallee (Synthyra) and collaborators",
+  "date": "2026-11-23",
+  "updated_date": "2026-11-24",
+  "source_tier": "our_experiment",
+  "read_depth": "full_text",
+  "urls": [
+    "https://github.com/lhallee/general_models_vs_plms"
+  ],
+  "tasks": [
+    "sequence_recall",
+    "variant_effect_zero_shot"
+  ],
+  "regimes": [
+    "intrinsic_text_only"
+  ],
+  "models_tested": [
+    "Claude Mythos 5.2 (harness, low effort)"
+  ],
+  "plm_baselines": [
+    "ESMC-6B",
+    "ESMC-600M",
+    "ESMC-300M",
+    "ESM-2 650M",
+    "Most common visible residue"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "All prompts, answers, tables, and scripts released in repository.",
+  "methods": {
+    "datasets": "118 sequences from FLIP2 and FGFR2: 6 dataset parents (amylase, IRED, NucB, TrpB, PDZ3, FGFR2), 100 Rhomax queries (48 scored by Mythos 5.2), and 12 shuffled negative controls.",
+    "evaluation_protocol": "15%, 50%, and 85% of residues masked at shared positions across all models. Masked pLMs scored by single-site pseudo-log-likelihood (PPLL) and masked recovery; Mythos 5.2 scored by share of masked residues restored across 6 rotated prompt files with no overlap across levels.",
+    "controls_included": "Shuffled sequence copies (12 sequences), most-common visible residue baseline, and partial Spearman controlling for distance of true absorption maximum from the median.",
+    "compute_and_tools": "Single text prompt per batch via audited subagents (Read prompt, Write answer only) at low effort; ESMC/ESM-2 run in Docker on oracle_gh200.",
+    "metrics": "Masked residue recovery accuracy at 15/50/85% masking; Spearman correlation (2,000 bootstrap draws) between sequence knowledge and absolute absorption-maximum prediction error (nm).",
+    "wet_lab_protocol": "None (computational memorization and error correlation audit)."
+  },
+  "key_results": [
+    {
+      "claim_id": "seq_knowledge_rhodopsin_recovery",
+      "task": "sequence_recall",
+      "regime": "intrinsic_text_only",
+      "benchmark": "48 natural rhodopsins at 15% / 50% / 85% masking (+12 shuffled controls)",
+      "metric": "Share of masked residues restored",
+      "llm_model": "Claude Mythos 5.2",
+      "llm_score": "0.914 (15%), 0.758 (50%), 0.568 (85%); shuffled 0.096-0.107",
+      "baseline_model": "ESMC-6B (best pLM)",
+      "baseline_score": "0.594 (15%), 0.540 (50%), 0.125 (85%); shuffled 0.052-0.113",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "All-or-nothing sequence recall: Mythos returned 34/48, 32/48, and 23/48 rhodopsins at >=90% accuracy (and FGFR2 100% at 50% mask), whereas no pLM reached 90% on any rhodopsin."
+    },
+    {
+      "claim_id": "seq_knowledge_vs_error",
+      "task": "sequence_recall",
+      "regime": "intrinsic_text_only",
+      "benchmark": "48 rhodopsins (Mythos) / 100 rhodopsins (pLMs) absorption-maximum error",
+      "metric": "Spearman (knowledge vs absolute error, 95% CI)",
+      "llm_model": "Claude Mythos 5.2 (k0 / k256)",
+      "llm_score": "-0.147 (-0.407 to +0.131) k0; -0.044 (-0.331 to +0.237) k256",
+      "baseline_model": "ESMC-600M / ESM-2 650M / ESMC-300M / ESMC-6B PPLL",
+      "baseline_score": "-0.502 (ESMC-600M), -0.198 (ESM-2), -0.077 (ESMC-300M), +0.033 (ESMC-6B)",
+      "wet_lab": false,
+      "evidence_strength": "supported_controlled",
+      "notes": "Memorizing a sequence does not predict Mythos's property-prediction accuracy (8 never-recited rhodopsins have 3.5 nm median error vs 4.0 nm for 19 always-recited)."
+    }
+  ],
+  "confounder_audit": {
+    "temporal_cutoff": {
+      "status": "not_applicable",
+      "evidence": "Explicitly designed as a direct sequence-memorization measurement on public pre-cutoff proteins (including confirming FGFR2 sequence is memorized even though its Nov 2026 assay is post-cutoff)."
+    },
+    "homology_overlap": {
+      "status": "evidenced_concern",
+      "evidence": "Experiment record explicitly notes Rhomax queries include variants of shared wild-types, so the 48 sequences are not fully independent and bootstrap CIs are slightly narrow; masked recovery mixes exact sequence recall with family knowledge."
+    },
+    "cross_modal_literature_recall": {
+      "status": "controlled",
+      "evidence": "Direct target of measurement; rotated prompt files prevent cross-level leakage within a batch."
+    },
+    "preprocessing_artifacts": {
+      "status": "controlled",
+      "evidence": "Shuffled controls confirm zero composition shortcut (0.096-0.107 vs 0.110 majority guess); length mismatches audited (1,005/1,005 right length, 1 visible residue altered)."
+    },
+    "downstream_oracle_filtering": {
+      "status": "not_applicable",
+      "evidence": "Direct masked sequence completion without external oracle."
+    },
+    "compute_and_tool_asymmetry": {
+      "status": "controlled",
+      "evidence": "No tools allowed (transcripts audited); identical masked positions across Mythos 5.2 and all four pLMs."
+    },
+    "baseline_fairness": {
+      "status": "controlled",
+      "evidence": "Evaluates ESMC-300M/600M/6B and ESM-2 650M on both exact PPLL and identical multi-mask completion."
+    },
+    "data_and_wetlab_transparency": {
+      "status": "controlled",
+      "evidence": "All prompts, answers, and per-sequence CSVs released; power limit transparently stated (n=48 detects |r| >= 0.4)."
+    }
+  },
+  "critiques_and_commentary": [],
+  "takeaway": "Claude Mythos 5.2 reconstructs natural rhodopsins at 91%/76%/57% accuracy under 15%/50%/85% masking (far above ESMC-6B's 59%/54%/13%, and 100% on FGFR2 at 50% masking), confirming strong sequence memorization. Yet sequence recall does not predict Mythos's absorption-maximum error (Spearman -0.15, CI -0.41 to +0.13), showing sequence recall and property accuracy are distinct."
+}

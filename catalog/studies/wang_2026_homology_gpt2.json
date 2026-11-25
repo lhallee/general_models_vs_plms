@@ -1,0 +1,54 @@
+{
+  "id": "wang_2026_homology_gpt2",
+  "title": "Emergence of Biological Structural Discovery in General-Purpose Language Models",
+  "short_label": "Wang 2026 (GPT-2 Homology)",
+  "authors": "Liang Wang",
+  "date": "2026-01-07",
+  "updated_date": "2026-07-09",
+  "source_tier": "preprint",
+  "read_depth": "queued_unread",
+  "urls": [
+    "https://doi.org/10.64898/2026.01.03.697478"
+  ],
+  "tasks": [
+    "sequence_recall"
+  ],
+  "regimes": [
+    "intrinsic_text_only"
+  ],
+  "models_tested": [
+    "GPT-2 (English-only)"
+  ],
+  "plm_baselines": [
+    "Randomly initialized model (full baselines pending PDF read)"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "Unverified (queued unread).",
+  "methods": {
+    "datasets": "Protein homology detection (pending full PDF read).",
+    "evaluation_protocol": "Pending full PDF read.",
+    "controls_included": "Randomly initialized model and author-trained English-only GPT-2 mentioned in abstract (pending full PDF read).",
+    "compute_and_tools": "Pending full PDF read.",
+    "metrics": "ROC AUC (pending full PDF read).",
+    "wet_lab_protocol": "None."
+  },
+  "key_results": [
+    {
+      "claim_id": "homology_gpt2_queued",
+      "task": "sequence_recall",
+      "regime": "intrinsic_text_only",
+      "benchmark": "Protein homology detection",
+      "metric": "ROC AUC",
+      "llm_model": "English-only GPT-2",
+      "llm_score": "Pending full PDF verification",
+      "baseline_model": "Randomly initialized GPT-2",
+      "baseline_score": "Pending full PDF verification",
+      "wet_lab": false,
+      "evidence_strength": "queued",
+      "notes": "bioRxiv full-text PDF/JATS returned HTTP 429; queued without critique until full text is read."
+    }
+  ],
+  "confounder_audit": {},
+  "critiques_and_commentary": [],
+  "takeaway": "Queued unread (bioRxiv HTTP 429 on 2026-11-25): tests protein homology detection in English-only GPT-2; excluded from critiques until full text is verified."
+}

@@ -1,0 +1,101 @@
+{
+  "id": "rong_2025_liveproteinbench",
+  "title": "LiveProteinBench: A Contamination-Free Benchmark for Assessing Models' Specialized Capabilities in Protein Science",
+  "short_label": "Rong et al. 2025 (LiveProteinBench)",
+  "authors": "Dingyi Rong, Zijian Chen, Qi Jia, Kaiwei Zhang, Haotian Lu, Guangtao Zhai, Ning Liu",
+  "date": "2025-12-24",
+  "updated_date": "",
+  "source_tier": "preprint",
+  "read_depth": "full_text",
+  "urls": [
+    "https://arxiv.org/abs/2512.22257",
+    "https://github.com/Rongdingyi/LiveProteinBench"
+  ],
+  "tasks": [
+    "protein_qa_and_reasoning"
+  ],
+  "regimes": [
+    "intrinsic_text_only",
+    "finetuned_llm"
+  ],
+  "models_tested": [
+    "GPT-5",
+    "GPT-o3",
+    "Gemini-2.5-pro",
+    "Claude-3.7-sonnet",
+    "Gemini-2.0-flash",
+    "GPT-4o",
+    "Qwen3-32B",
+    "Deepseek-v3",
+    "Deepseek-r1",
+    "Llama3.3-70B",
+    "Qwen2.5-72B/32B",
+    "Qwen2.5-VL-32B",
+    "InternVL3-78B"
+  ],
+  "plm_baselines": [
+    "Domain-specialized SLLMs only: BioMedGPT-R1 (17B), EvoLlama (8B), Evolla (10B). Zero pLM or BLAST/InterProScan baselines."
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "GitHub repository released (Rongdingyi/LiveProteinBench); labels programmatically derived from UniProt/GOA.",
+  "methods": {
+    "datasets": "1,797 four-choice MCQs across 12 protein tasks from UniProt entries first publicly released after 2025-01-01, plus 195 CPI questions and a 2020 subset on 5 tasks for temporal comparison.",
+    "evaluation_protocol": "Standardized prompt requiring strict '1. reasoning ... 2. answer: [A/B/C/D]' format, tested sequence-only, with 6 orthogonal PyMOL 2D structure images, and with 3Di strings.",
+    "controls_included": "2020 vs 2025 temporal drop ablation (Table 4), sequence-only vs 2D-image ablation (Table 5), thinking on/off ablation (Table 6), and 1-shot formatting rescue for SLLMs (Tables 9-10).",
+    "compute_and_tools": "No external tools; frontier reasoning models use hidden CoT compute vs 8B-17B non-thinking SLLMs.",
+    "metrics": "4-choice MCQ Accuracy (%) and strict format Pass Rate (%).",
+    "wet_lab_protocol": "None (UniProt annotation QA)."
+  },
+  "key_results": [
+    {
+      "claim_id": "liveproteinbench_12task_mcq",
+      "task": "protein_qa_and_reasoning",
+      "regime": "intrinsic_text_only",
+      "benchmark": "LiveProteinBench (1,797 post-Jan-2025 UniProt 4-choice MCQs, 12 tasks)",
+      "metric": "Mean accuracy (%)",
+      "llm_model": "GPT-5 / o3 / Claude-3.7-sonnet / Gemini-2.5-pro",
+      "llm_score": "GPT-5 60.65% (60.49% seq-only), o3 56.48%, Claude-3.7 51.47% seq-only (47.58% w/ images), Gemini-2.5-pro 47.97%",
+      "baseline_model": "BioMedGPT-R1 (17B) / EvoLlama (8B) / Evolla (10B) [no pLM/BLAST baseline]",
+      "baseline_score": "31.83% / 24.26% (30.00% 1-shot) / 22.98% (0% strict format pass rate for BioMedGPT-R1 & Evolla)",
+      "wet_lab": false,
+      "evidence_strength": "suggestive_confounded",
+      "notes": "2020->2025 temporal drop is real (GPT-5 66.76% -> 38.47% on 5 hard tasks), and 2D PyMOL images often hurt MLLMs; however, Jan 2025 overlaps mid-2025 model cutoffs, no homology clustering excludes close pre-2025 homologs, and strict regex parsing penalizes SLLMs."
+    }
+  ],
+  "confounder_audit": {
+    "temporal_cutoff": {
+      "status": "evidenced_concern",
+      "evidence": "Uses a 2025-01-01 cutoff (and Table 4 confirms huge 2020->2025 drops), but Fig 1A itself shows GPT-5, Gemini-2.5-pro, and Qwen-3 training cutoffs extend well into 2025."
+    },
+    "homology_overlap": {
+      "status": "uncontrolled",
+      "evidence": "No sequence-identity clustering against pre-2025 UniProt; Appendix E case studies confirm models solve items by matching conserved motifs and lengths to known families."
+    },
+    "cross_modal_literature_recall": {
+      "status": "evidenced_concern",
+      "evidence": "Homologous 2025 entries allow conserved-motif family recall, and 2020 items exhibit heavy memorization inflation (Table 4)."
+    },
+    "preprocessing_artifacts": {
+      "status": "evidenced_concern",
+      "evidence": "Strict format parsing causes 0.00% Pass Rate for BioMedGPT-R1 and Evolla (Table 12), confounding instruction compliance with protein understanding; 6-view PyMOL images hurt several MLLMs."
+    },
+    "downstream_oracle_filtering": {
+      "status": "not_applicable",
+      "evidence": "4-choice MCQ benchmark."
+    },
+    "compute_and_tool_asymmetry": {
+      "status": "evidenced_concern",
+      "evidence": "Compares frontier reasoning models (GPT-5, o3) with hidden CoT against 8B-17B non-thinking SLLMs."
+    },
+    "baseline_fairness": {
+      "status": "evidenced_concern",
+      "evidence": "Omits any pLM (ESM2/ESMC) or standard bioinformatics baseline (BLAST, InterProScan) and penalizes SLLMs via zero-shot formatting."
+    },
+    "data_and_wetlab_transparency": {
+      "status": "controlled",
+      "evidence": "Experimentally validated UniProt/PDB labels, per-task counts reported, and public GitHub repository."
+    }
+  },
+  "critiques_and_commentary": [],
+  "takeaway": "On 1,797 post-Jan-2025 UniProt MCQs, GPT-5 (60.65%) outperforms small protein-adapted LLMs (23-32%) and drops steeply relative to 2020 entries (38.47% vs 66.76% on five hard tasks), while naive 2D structure images frequently degrade accuracy. Lack of homology clustering, partial 2025 cutoff overlap, strict format penalties on SLLMs, and missing pLM/BLAST baselines limit how strongly the gap reflects sequence understanding."
+}

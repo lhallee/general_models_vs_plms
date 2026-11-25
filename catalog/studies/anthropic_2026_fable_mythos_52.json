@@ -1,0 +1,105 @@
+{
+  "id": "anthropic_2026_fable_mythos_52",
+  "title": "Introducing Claude Fable 5.2 and Claude Mythos 5.2 (Capsid Modeling and 24-hr Binder Benchmark)",
+  "short_label": "Anthropic 2026 (Claude 5.2 Post)",
+  "authors": "Anthropic",
+  "date": "2026-11-09",
+  "updated_date": "2026-11-11",
+  "source_tier": "technical_report",
+  "read_depth": "full_text",
+  "urls": [
+    "https://www.anthropic.com/claude-fable-and-mythos-5-2"
+  ],
+  "tasks": [
+    "structure_prediction",
+    "backbone_and_binder_design"
+  ],
+  "regimes": [
+    "tool_orchestrated_agent"
+  ],
+  "models_tested": [
+    "Claude Mythos 5.2",
+    "Claude Fable 5.2",
+    "Claude Mythos 5.1",
+    "Claude Opus 5.5"
+  ],
+  "plm_baselines": [
+    "OpenFold3-preview2 and ESMFold2 used as orchestrated folding engines (no standalone baseline table)"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "No capsid target list, per-target RMSDs, code, prompts, or binder metric definition released in the blog post (defers to System Card).",
+  "methods": {
+    "datasets": "34 natural and engineered viral capsids (including AAV2 PDB:1LP3); unspecified 24-hour de novo binder design benchmark.",
+    "evaluation_protocol": "Mythos 5.2 writes code running OpenFold3-preview2 and ESMFold2 on overlapping chain subsets and merges predictions using known capsid symmetries ('big bang' initialization referenced in prompt, Footnote 3). Counted accurate if either OpenFold3-preview2 OR ESMFold2 achieves Ca RMSD < 3 A.",
+    "controls_included": "None reported in the release post.",
+    "compute_and_tools": "NVIDIA H200 GPU running OpenFold3-preview2 (~58 min on AAV2) and ESMFold2 (~7 min on AAV2); GPT-6 Astra and Gemini 4 Carbon omitted ('—') on the binder table.",
+    "metrics": "Capsid count within 3 A Ca RMSD (best of two folding models); undefined numeric score (85.1) for 24-hr binder design.",
+    "wet_lab_protocol": "None."
+  },
+  "key_results": [
+    {
+      "claim_id": "claude52_capsid_orchestration",
+      "task": "structure_prediction",
+      "regime": "tool_orchestrated_agent",
+      "benchmark": "34 natural and engineered capsids (incl. AAV2 PDB:1LP3)",
+      "metric": "Count with Ca RMSD < 3 A (OpenFold3-preview2 or ESMFold2)",
+      "llm_model": "Claude Mythos 5.2 writing symmetry-merging wrapper around OpenFold3-preview2 / ESMFold2",
+      "llm_score": "28/34 capsids < 3 A (AAV2: 1.2 A OpenFold3-preview2, 1.4 A ESMFold2)",
+      "baseline_model": "Standalone OpenFold3 / ESMFold2 / SymProFold / CombFold",
+      "baseline_score": "Not reported",
+      "wet_lab": false,
+      "evidence_strength": "suggestive_confounded",
+      "notes": "Folding is performed by OpenFold3-preview2 and ESMFold2 with best-of-two selection, known symmetries, and 'big bang' initialization hinted in prompt; no baseline or capsid list published."
+    },
+    {
+      "claim_id": "claude52_24hr_binder_table",
+      "task": "backbone_and_binder_design",
+      "regime": "tool_orchestrated_agent",
+      "benchmark": "24-hour de novo binder design (unspecified targets/metric)",
+      "metric": "Unspecified score (defers to System Card)",
+      "llm_model": "Claude Mythos 5.2 / Mythos 5.1 / Opus 5.5 (no safeguards)",
+      "llm_score": "85.1 (Mythos 5.2) / 79.1 (Mythos 5.1) / 82.6 (Opus 5.5)",
+      "baseline_model": "GPT-6 Astra / Gemini 4 Carbon / specialized pipelines",
+      "baseline_score": "Not reported ('—')",
+      "wet_lab": false,
+      "evidence_strength": "unverified_leaked",
+      "notes": "No targets, metric definition, or external baselines appear in this release post."
+    }
+  ],
+  "confounder_audit": {
+    "temporal_cutoff": {
+      "status": "uncontrolled",
+      "evidence": "AAV2 (PDB:1LP3) is a classic public structure and no temporal holdout is stated for the 34 capsids or binder targets."
+    },
+    "homology_overlap": {
+      "status": "uncontrolled",
+      "evidence": "No sequence or structural split against Claude, OpenFold3-preview2, or ESMFold2 training data."
+    },
+    "cross_modal_literature_recall": {
+      "status": "evidenced_concern",
+      "evidence": "Known capsid symmetries were leveraged and Footnote 3 explicitly notes 'big bang' initialization was referenced in the prompt."
+    },
+    "preprocessing_artifacts": {
+      "status": "uncontrolled",
+      "evidence": "Best-of-two selection across OpenFold3-preview2 and ESMFold2 defines capsid success; binder score 85.1 lacks metric units or target list."
+    },
+    "downstream_oracle_filtering": {
+      "status": "evidenced_concern",
+      "evidence": "Structure prediction is executed entirely by OpenFold3-preview2 and ESMFold2 rather than intrinsic LLM folding."
+    },
+    "compute_and_tool_asymmetry": {
+      "status": "uncontrolled",
+      "evidence": "Runs OpenFold3-preview2 and ESMFold2 on H200 GPUs; competitor rows are blank."
+    },
+    "baseline_fairness": {
+      "status": "uncontrolled",
+      "evidence": "No comparison against existing symmetry-folding tools (SymProFold, CombFold, FoldaVirus) cited in Footnote 3."
+    },
+    "data_and_wetlab_transparency": {
+      "status": "evidenced_concern",
+      "evidence": "No target list, code, prompts, wet-lab data, or per-capsid RMSD table released in the post."
+    }
+  },
+  "critiques_and_commentary": [],
+  "takeaway": "Anthropic's release post shows Claude Mythos 5.2 orchestrating OpenFold3-preview2 and ESMFold2 via symmetry-aware scripts to model 28/34 capsids within 3 A, alongside an undocumented 85.1 binder benchmark score. Without target lists, baselines, or metric definitions, neither claim is independently verifiable as a controlled LLM-vs-pLM comparison."
+}

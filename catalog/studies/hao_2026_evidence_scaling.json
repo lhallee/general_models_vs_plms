@@ -1,0 +1,54 @@
+{
+  "id": "hao_2026_evidence_scaling",
+  "title": "Evidence Scaling for Zero-Shot Protein Reasoning with Large Language Models",
+  "short_label": "Hao et al. 2026 (Evidence Scaling)",
+  "authors": "Z. Hao, C. Wang, D. Li, Y. Wang",
+  "date": "2026-10-01",
+  "updated_date": "",
+  "source_tier": "preprint",
+  "read_depth": "queued_unread",
+  "urls": [
+    "https://doi.org/10.64898/2026.09.27.754822"
+  ],
+  "tasks": [
+    "variant_effect_zero_shot"
+  ],
+  "regimes": [
+    "tool_orchestrated_agent"
+  ],
+  "models_tested": [
+    "Frozen general LLMs (full list pending PDF read)"
+  ],
+  "plm_baselines": [
+    "ProteinGym specialist predictors (pending PDF read)"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "Unverified (queued unread).",
+  "methods": {
+    "datasets": "ProteinGym (exact subset pending full PDF read).",
+    "evaluation_protocol": "Adds structural and evolutionary evidence from standard tools to prompts of frozen LLMs (pending full PDF read).",
+    "controls_included": "Mismatched-variant evidence negative control mentioned in abstract (pending full PDF read).",
+    "compute_and_tools": "Pending full PDF read.",
+    "metrics": "Pending full PDF read.",
+    "wet_lab_protocol": "Pending full PDF read."
+  },
+  "key_results": [
+    {
+      "claim_id": "evidence_scaling_queued",
+      "task": "variant_effect_zero_shot",
+      "regime": "tool_orchestrated_agent",
+      "benchmark": "ProteinGym",
+      "metric": "Pending full PDF read",
+      "llm_model": "Frozen LLMs + structural/evolutionary evidence",
+      "llm_score": "Pending full PDF read",
+      "baseline_model": "Specialist predictors",
+      "baseline_score": "Pending full PDF read",
+      "wet_lab": false,
+      "evidence_strength": "queued",
+      "notes": "bioRxiv full-text PDF/JATS returned HTTP 429; queued without critique until full text is downloaded."
+    }
+  ],
+  "confounder_audit": {},
+  "critiques_and_commentary": [],
+  "takeaway": "Queued unread (bioRxiv HTTP 429 on 2026-11-25): adds structural/evolutionary tool evidence to frozen LLM prompts on ProteinGym; excluded from critiques until full text is verified."
+}

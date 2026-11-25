@@ -1,0 +1,114 @@
+{
+  "id": "rowan_2026_guided_inverse_folding",
+  "title": "Guided Inverse Folding with LLMs",
+  "short_label": "Ganti / Rowan 2026 (Inverse Folding)",
+  "authors": "Ishaan Ganti (Rowan Scientific)",
+  "date": "2026-10-07",
+  "updated_date": "",
+  "source_tier": "blog_repo",
+  "read_depth": "full_text",
+  "urls": [
+    "https://rowansci.com/blog/guided-inverse-folding-llms"
+  ],
+  "tasks": [
+    "inverse_folding",
+    "backbone_and_binder_design"
+  ],
+  "regimes": [
+    "intrinsic_with_code",
+    "hybrid_generation_plus_oracle_filter"
+  ],
+  "models_tested": [
+    "GPT-6 Astra (High)",
+    "GPT-5.6 Sol (High)",
+    "GPT-5.6 Terra (High)",
+    "Claude Opus 5 (Medium)"
+  ],
+  "plm_baselines": [
+    "ProteinMPNN (T=0.1, used to generate 3 of 4 in-context example sequences; not tabulated head-to-head)"
+  ],
+  "wet_lab_validated": false,
+  "code_and_data_released": "Prompt templates and RBFE protocol in appendices; no public GitHub repo or numerical pass-rate table released.",
+  "methods": {
+    "datasets": "5 PDB backbones stripped to N/CA/C/O (all Gly): 4 post-cutoff (9VGJ, 9N30, 27AH, 9TLN, June-Aug 2026) + 1 pre-cutoff (9C14, Aug 2025). Plus a ligand-selectivity pocket redesign case study on 5WGD (240 aa) against estradiol (E2), estrone (E1), and testosterone (T).",
+    "evaluation_protocol": "Because zero-shot inverse folding failed in pilots, every prompt provides 4 compatible sequences (1 PDB reference + 3 ProteinMPNN T=0.1 sequences) and enforces <=70%, 50%, or 40% sequence identity caps against examples and within-batch (not across rounds). 3 rounds x 6 proposals in a closed-book Python 3.11 sandbox with ESMFold2/Boltz-2 refolding metrics fed back in rounds 2-3. 5WGD uses GPT-6 Astra to propose 8 sequences/ligand, co-folds with Boltz-2/ESMFold2, picks 1/ligand with fresh GPT-6 Astra, and evaluates via Rowan RBFE.",
+    "controls_included": "4/5 post-cutoff Gly-stripped backbones, no-network Python sandbox, strict identity caps against input examples. Missing: no parallel no-feedback iteration control and no head-to-head ProteinMPNN benchmark.",
+    "compute_and_tools": "Closed-book Python 3.11 sandbox (numpy/scipy/pandas) + 2 rounds of ESMFold2/Boltz-2 metrics. OpenAI models ran at High effort with no turn timeout; Claude Opus 5 downgraded to Medium effort with 600-900 s prompt timeouts.",
+    "metrics": "Refolding pass rate (ESMFold2 & Boltz-2 Ca RMSD <= 2.5 A, TM-score >= 0.80, pLDDT >= 75); RBFE delta-delta-G (kcal/mol) on 5WGD.",
+    "wet_lab_protocol": "None (purely computational refolding and RBFE)."
+  },
+  "key_results": [
+    {
+      "claim_id": "rowan_postcutoff_guided_if",
+      "task": "inverse_folding",
+      "regime": "hybrid_generation_plus_oracle_filter",
+      "benchmark": "5 PDB backbones (4 post-cutoff June-Aug 2026) at 70%/50%/40% identity caps",
+      "metric": "ESMFold2 + Boltz-2 refolding pass rate (plot-only, no scalar table)",
+      "llm_model": "GPT-6 Astra / GPT-5.6 Sol / GPT-5.6 Terra / Claude Opus 5 (with 4 example sequences)",
+      "llm_score": "Zero-shot failed; with 4 examples GPT-6 Astra leads and produces passing designs at 50% (and 27AH 40% cap: 28/82 ref match); Opus 5 struggles even on 9TLN",
+      "baseline_model": "ProteinMPNN (supplied 3/4 examples; no head-to-head pass rate reported)",
+      "baseline_score": "Not tabulated",
+      "wet_lab": false,
+      "evidence_strength": "suggestive_confounded",
+      "notes": "Post-cutoff Gly-stripped backbones control memorization well, showing zero-shot fails without examples while guided redesign succeeds down to 40-50% ID; confounded by ProteinMPNN seed examples, lack of inter-round ID caps, asymmetric Claude timeouts, and missing no-feedback control."
+    },
+    {
+      "claim_id": "rowan_5wgd_selectivity",
+      "task": "backbone_and_binder_design",
+      "regime": "hybrid_generation_plus_oracle_filter",
+      "benchmark": "5WGD ligand-selectivity pocket redesign (N=1 candidate/ligand)",
+      "metric": "Rowan RBFE selectivity (kcal/mol)",
+      "llm_model": "GPT-6 Astra + Boltz-2/ESMFold2 co-folding + GPT-6 Astra selector",
+      "llm_score": "Testosterone design: +3.16 vs E1, +3.83 vs E2 (cycle disc 0.05); E1 design: +2.57 vs E2, +2.32 vs T (disc 2.01); E2 design failed (-0.71 vs E1)",
+      "baseline_model": "Reference 5WGD/E2 (+4.10 vs E1, +2.43 vs T)",
+      "baseline_score": "No specialized ligand-design baseline",
+      "wet_lab": false,
+      "evidence_strength": "suggestive_confounded",
+      "notes": "Pre-cutoff 5WGD target, N=1 selected candidate per ligand, computational RBFE only (E1 cycle discrepancy 2.01 kcal/mol)."
+    }
+  ],
+  "confounder_audit": {
+    "temporal_cutoff": {
+      "status": "controlled",
+      "evidence": "4 of 5 main inverse-folding backbones (9VGJ, 9N30, 27AH, 9TLN) were released in PDB June-August 2026 after model cutoffs; pre-cutoff 9C14 and 5WGD are explicitly noted."
+    },
+    "homology_overlap": {
+      "status": "evidenced_concern",
+      "evidence": "Zero-shot failed, so every prompt supplied 4 compatible sequences (1 native + 3 ProteinMPNN); identity caps were not enforced across rounds and Appendix D shows models hugging the identity ceiling."
+    },
+    "cross_modal_literature_recall": {
+      "status": "controlled",
+      "evidence": "4/5 main backbones are post-cutoff, Gly-stripped, and run in a no-network sandbox (pre-cutoff 9C14 and 5WGD remain exposed)."
+    },
+    "preprocessing_artifacts": {
+      "status": "evidenced_concern",
+      "evidence": "Native reference exempted from refolding filter; inter-round sequence reuse uncapped; GPT-5.6 Terra violated the 70% cap on 3/6 final-round 9C14 sequences."
+    },
+    "downstream_oracle_filtering": {
+      "status": "evidenced_concern",
+      "evidence": "3/4 input sequences come from ProteinMPNN, rounds 2-3 use ESMFold2/Boltz-2 feedback, and 5WGD selects 1/8 candidates via Boltz-2/ESMFold2 co-folds."
+    },
+    "compute_and_tool_asymmetry": {
+      "status": "evidenced_concern",
+      "evidence": "OpenAI models ran at High effort without turn timeouts, whereas Claude Opus 5 was downgraded to Medium effort with 600-900 s timeouts."
+    },
+    "baseline_fairness": {
+      "status": "evidenced_concern",
+      "evidence": "Authors admit no parallel no-feedback iteration control was run, and ProteinMPNN was not benchmarked head-to-head on the same identity-cap criteria."
+    },
+    "data_and_wetlab_transparency": {
+      "status": "evidenced_concern",
+      "evidence": "No wet-lab validation, no numerical pass-rate table in text, and no public repository link."
+    }
+  },
+  "critiques_and_commentary": [
+    {
+      "author": "Anthony Gitter",
+      "date": "2026-11-25",
+      "source_type": "x_thread",
+      "url": "https://x.com/anthonygitter/status/2125456200464572481",
+      "summary": "Highlighted Rowan's choice of newly released post-cutoff PDB structures as a necessary control missing from OpenAI's GPT-6 inverse-folding benchmark."
+    }
+  ],
+  "takeaway": "On four post-cutoff Gly-stripped PDB backbones, frontier LLMs fail zero-shot inverse folding but generate refoldable designs down to 40-50% identity when seeded with four compatible example sequences (native + ProteinMPNN) and a Python sandbox. Gains from iterative ESMFold2/Boltz-2 feedback are small and confounded by missing no-feedback controls, uncapped inter-round reuse, asymmetric Claude timeouts, and purely computational evaluation."
+}
