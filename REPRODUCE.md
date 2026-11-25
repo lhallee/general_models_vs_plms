@@ -93,6 +93,7 @@ bash box.sh prefer short base 2.4                 # ProGen2-base: no examples, t
 bash box.sh prefer chain small 1.2 long           # one setting for 40 epochs, every query scored after every epoch
 bash box.sh prefer night small 1100               # three variants of the tuning of ProGen2-small, none started after 11:00 UTC
 bash box.sh prefer chain base 1.5 fixed           # the same one setting on ProGen2-base for 20 epochs
+bash box.sh prefer likelihood small 0.8           # the same one setting with a likelihood term at the weights 1, 0.01, and 0.1
 python -m general_models_vs_plms.figures --summary <summary> --out figures/mythos \
     --primary claude-mythos-5-2@harness-low --only preference_long preference_scale
 ```
@@ -100,7 +101,11 @@ python -m general_models_vs_plms.figures --summary <summary> --out figures/mytho
 The three variants are a learning rate of 0.000001 (`slow`), a low-rank update with every released weight frozen
 (`lowrank`), and tuning on every labeled row of a split in place of 256 (`rows`). The `long` run is scored three
 ways: after 20 epochs and after 40 epochs with no checkpoint chosen (`long20`, `long40`), and at the checkpoint its
-held-out rows choose (`long`). Its records go to `report --trace` with the two files above.
+held-out rows choose (`long`). Its records go to `report --trace` with the two files above. The `likelihood` stage
+adds the negative log-likelihood of each pair's preferred row to the ranked loss of that setting, and its three runs
+are read after 20 epochs with nothing chosen (`nll20`, `nllmid20`, and `nlllight20` for the weights 1, 0.1, and
+0.01). Their records go to `report --trace` as well, whose table holds the mean score of the queries after every
+epoch beside the Spearman.
 
 The baselines on the rows the tuning holds out need the features the first experiment stored and no GPU.
 

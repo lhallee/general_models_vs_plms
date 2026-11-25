@@ -254,6 +254,20 @@ def test_tuned_questions_set_a_variant_on_its_own_tasks_against_the_primary_arm_
     assert len(rows) == len(asked) and all(row["splits"] == 1 for row in rows)
 
 
+def test_tuned_questions_set_a_run_against_the_run_it_changes_one_thing_of() -> None:
+    predictions = tuned_toy([("progen2_small_dpo", "k256"), ("progen2_small_long20_dpo", "k256"),
+                             ("progen2_small_nll20_dpo", "k256"), ("ridge_esmc_600m", "k256")])
+    scores = report.Scores(predictions)
+
+    asked = {(question, left.method, right.method) for question, left, right in report.tuned_questions(scores, [], "ridge_esmc_600m")}
+
+    counterpart = "a run of the tuning against the run it differs from in one thing"
+    assert (counterpart, "progen2_small_nll20_dpo", "progen2_small_long20_dpo") in asked
+    # The fixed recipe itself differs from the primary arm, which every variant is already set against.
+    assert not any(question == counterpart and left == "progen2_small_long20_dpo" for question, left, _ in asked)
+    assert any(left == "progen2_small_long20_dpo" and right == "progen2_small_dpo" for _, left, right in asked)
+
+
 def test_tuned_orders_average_the_ranks_of_every_batch_order_and_ask_nothing_until_all_ran() -> None:
     orders = [("progen2_small_dpo", "k256"), ("progen2_small_dpo_seed1", "k256"), ("progen2_small_dpo_seed2", "k256")]
     predictions = tuned_toy([*orders, ("ridge_esmc_600m", "k256"), ("claude-x@low", "k256")])
@@ -329,8 +343,8 @@ def test_tuning_table_holds_one_row_an_arm_with_its_chosen_recipe_or_its_failure
 
 
 def test_trace_table_scores_every_epoch_on_the_traced_queries_and_marks_the_chosen_one() -> None:
-    predictions = pd.DataFrame({"task_id": "t", "method": ["m"] * 4 + ["n"] * 4, "query_id": ["Q0", "Q1", "Q2", "Q3"] * 2,
-                                "truth": [1.0, 2.0, 3.0, 4.0] * 2})
+    predictions = pd.DataFrame({"task_id": "t", "method": ["m"] * 4 + ["progen2_small_zero"] * 4, "query_id": ["Q0", "Q1", "Q2", "Q3"] * 2,
+                                "truth": [1.0, 2.0, 3.0, 4.0] * 2, "prediction": [0.0] * 4 + [-2.0, -3.0, -4.0, -9.0]})
     rising, falling = [0.1, 0.2, 0.3], [0.3, 0.2, 0.1]
     record = {
         "model": ["hugohrban/progen2-small", "43237a0b"], "task_id": "t", "split": "a/one", "traced_queries": 3,
@@ -347,6 +361,10 @@ def test_trace_table_scores_every_epoch_on_the_traced_queries_and_marks_the_chos
     assert list(table["spearman"]) == [1.0, 1.0, 1.0, -1.0]
     assert list(table["chosen"]) == [False, False, False, True]
     assert list(table["held_out_spearman"]) == [0.2, 0.3, 0.4, 0.6]
+    # The mean score of the traced queries after each epoch, beside the same three queries under the untuned model.
+    assert list(table["mean_score"]) == pytest.approx([0.2] * 4) and set(table["untuned_mean_score"]) == {-3.0}
+    alone = report.trace_table([record], predictions[predictions["method"] == "m"])
+    assert alone["untuned_mean_score"].isna().all() and list(alone["spearman"]) == [1.0, 1.0, 1.0, -1.0]
 
 
 def test_match_groups_set_apart_the_splits_whose_values_repeat() -> None:

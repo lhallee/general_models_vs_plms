@@ -116,6 +116,17 @@ ProGen2-small's own hidden states), so part of what remains is the protein model
 fixed recipe was picked with the measured values of the first 100 queries of these splits, it ran under one batch
 order, and no ESMC model was tuned.
 
+The preference loss by itself also leaves the tuned model unfit as a model of sequences. It reads only how the rows
+of a batch differ, and under the fixed recipe the mean log-likelihood per residue that ProGen2-small gives the test
+queries falls from -2.12 as released to -7.71 after 20 epochs, on every FLIP2 split. Adding the negative
+log-likelihood of each pair's preferred row to the loss, as Iterative Reasoning Preference Optimization does, slows
+that fall at the lightest of three weights and stops it at the other two. It does not change the comparison. At that
+method's own weight of 1, the run named in advance as the primary one, the ranking does not improve: 0.295 on queries
+101 to 300, -0.030 (-0.063 to +0.005) from the recipe without the term. At a tenth and a hundredth of that weight it
+scores 0.348 and 0.344, +0.024 (-0.002 to +0.051) and +0.020 (+0.001 to +0.039), which is level with the best ridge
+on those queries (0.351) and not above it. Three weights were read under one batch order, so the gain of about 0.02
+is a lead and not a finding.
+
 ### The model learns from its examples and also uses what it knows about the protein
 
 Three changes to the prompt, tried on one split per dataset where the plain prompt scores 0.496, separate what the
@@ -197,7 +208,7 @@ ridge on protein language model features fit on the same examples, which is the 
 | Controls for the language model | Enciphered residues, reversed values, shuffled values, no examples, and the protein named |
 | Tuned protein language model | ProGen2-small, 151 million weights, with every weight tuned on 205 of the 256 rows by a ranked preference loss (Direct Preference Optimization, DPO) or a Bradley-Terry loss, and the learning rate, the weight of the loss, and the epoch chosen on the other 51 rows (73 and 51 on the one split with 124 rows) |
 | Controls for the tuning | The same model with no examples, a ridge on its hidden states, the same tuning on shuffled values, and two more batch orders |
-| Other scales of the tuning | One setting run for 20 and 40 epochs with nothing chosen, on ProGen2-small and on ProGen2-base (764 million weights), scored on every query; a learning rate ten times lower; a low-rank update; every labeled row of a split; and every baseline fit on the 205 tuning rows and scored on the 51 held-out rows |
+| Other scales of the tuning | One setting run for 20 and 40 epochs with nothing chosen, on ProGen2-small and on ProGen2-base (764 million weights), scored on every query; a learning rate ten times lower; a low-rank update; every labeled row of a split; the one setting with a likelihood term added to the loss at three weights; and every baseline fit on the 205 tuning rows and scored on the 51 held-out rows |
 | Score | Spearman on each split, averaged over splits, with every comparison made on the same queries for both sides |
 
 Claude Mythos 5.2 was asked through fresh subagents of a coding agent, one per prompt, at the effort level chosen on
@@ -215,7 +226,8 @@ dataset, and its 48 sequences detect only a correlation of about 0.4 or more. Th
 two generative models of one family. The recipe set in advance has three batch orders and a control, and the fixed
 recipe that reaches the ridge has one batch order, no control, and a setting picked with the measured values of the
 first 100 test queries, so its scores on those queries are optimistic and its scores on queries 101 to 300 are the
-ones to read. The result does not say what a tuned ESMC would score.
+ones to read. The likelihood term was read at three weights on ProGen2-small alone, under one batch order. The result
+does not say what a tuned ESMC would score.
 
 ## Repository
 
@@ -238,5 +250,7 @@ FLIP2 is the benchmark of Didi, Alamdari, Lu, Wittmann, Johnston, Amini, Madani,
 score follows Hsu, Nisonoff, Fannjiang, and Listgarten (Nature Biotechnology, 2022). ProGen2 is the model of Nijkamp,
 Ruffolo, Weinstein, Naik, and Madani (Cell Systems, 2023), the ranked preference loss is that of Widatalla and
 colleagues as Yang and colleagues applied it to ProGen2, and the Bradley-Terry loss is that of Hawkins-Hooker and
-colleagues. Diego del Alamo proposed the comparison of in-context learning with ridge regression on FLIP2, and the
-comparison with preference tuning of ProGen2. Full references are in [SURVEY.md](SURVEY.md).
+colleagues. The likelihood term is that of Pang and colleagues (Iterative Reasoning Preference Optimization, NeurIPS
+2024, [arXiv 2404.19733](https://arxiv.org/abs/2404.19733)). Diego del Alamo proposed the comparison of in-context
+learning with ridge regression on FLIP2, and the comparison with preference tuning of ProGen2. Full references are in
+[SURVEY.md](SURVEY.md).

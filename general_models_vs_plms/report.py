@@ -581,8 +581,9 @@ def tuned_questions(scores: Scores, models: list[str], best: str) -> list[tuple[
     Each tuned arm is set against the same model untuned, the same model under a ridge, the other loss, the same
     loss on permuted values, the fitted baselines on the same examples, and each language model. A variant of the
     tuning is also set against the primary arm of the first tuned model, and that arm's rank average with another
-    method against each of its two parts. The average of its batch orders is set against one order, the best ridge
-    and each language model.
+    method against each of its two parts. A run that changes one thing about a run other than the primary arm is
+    set against that run (`plan.PREFERENCE_COUNTERPARTS`). The average of its batch orders is set against one order,
+    the best ridge and each language model.
     """
     asked = []
     every = tuned_models(scores)
@@ -601,6 +602,10 @@ def tuned_questions(scores: Scores, models: list[str], best: str) -> list[tuple[
             asked.append(("the same with no examples", arm["zero"], named(f"{every[0]}_zero", "k256")))
             asked.append(("a variant of the tuning, or another model, against the first model with no examples",
                           arm["dpo"], named(f"{every[0]}_zero", "k256")))
+        counterpart = plan.PREFERENCE_COUNTERPARTS.get(tuned)
+        if counterpart:
+            asked.append(("a run of the tuning against the run it differs from in one thing", arm["dpo"],
+                          named(f"{counterpart}_dpo", tuned_arm_of(counterpart))))
         asked += [("preference tuning against the same model with no examples", arm[name], arm["zero"]) for name in ("dpo", "bt")]
         asked += [("preference tuning against a ridge on the same model's hidden states", arm[name], arm["ridge"]) for name in ("dpo", "bt")]
         asked.append(("the ranked preference loss against the Bradley-Terry loss", arm["dpo"], arm["bt"]))
@@ -651,6 +656,10 @@ def trace_table(records: list[dict[str, object]], predictions: pd.DataFrame) -> 
     scored `predictions`, in query order. `chosen` marks the checkpoint the held-out rows chose, the one a run
     reports. Every other row can only say what another choice would have scored, since comparing rows reads the
     measured values of the queries.
+
+    `mean_score` is the mean of the traced queries' scores, a mean log-likelihood per residue, and
+    `untuned_mean_score` the same under the model with no examples where the predictions hold it: the two show
+    whether tuning raised or lowered the likelihood of the protein's variants, which no Spearman does.
     """
     truths = predictions.drop_duplicates(["task_id", "query_id"]).sort_values("query_id")
     rows = []
@@ -660,6 +669,9 @@ def trace_table(records: list[dict[str, object]], predictions: pd.DataFrame) -> 
             continue
         truth = truths.loc[truths["task_id"] == record["task_id"], "truth"].to_numpy()[:traced]  # (q_traced,)
         assert len(truth) == traced, f"{record['task_id']} traced {traced} queries and the tables hold {len(truth)}"
+        zero = predictions[(predictions["task_id"] == record["task_id"]) & (predictions["method"] == f"{tuned_name(record)}_zero")]
+        untuned = zero.sort_values("query_id")["prediction"].to_numpy()[:traced]  # (q_traced,), or empty where no such method ran
+        untuned_mean = float(untuned.mean()) if len(untuned) == traced else float("nan")
         for arm, found in record["arms"].items():
             for curve in found["curves"]:
                 kept = all(curve[key] == found["recipe"][key] for key in ("learning_rate", "beta"))
@@ -667,7 +679,8 @@ def trace_table(records: list[dict[str, object]], predictions: pd.DataFrame) -> 
                     rows.append({"model": tuned_name(record), "split": record["split"], "arm": arm,
                                  "learning_rate": curve["learning_rate"], "beta": curve["beta"], "epoch": epoch,
                                  "held_out_spearman": held, "spearman": spearman(truth, np.array(scores)), "queries": traced,
-                                 "chosen": kept and epoch == found["epoch"]})
+                                 "chosen": kept and epoch == found["epoch"],
+                                 "mean_score": float(np.mean(scores)), "untuned_mean_score": untuned_mean})
     return pd.DataFrame(rows)
 
 

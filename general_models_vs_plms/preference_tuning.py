@@ -3,6 +3,7 @@
     python -m general_models_vs_plms.preference_tuning --data DIR --tasks DIR --out DIR --model small
         [--splits A,B] [--arms dpo,bt] [--hours H] [--trace N]
         [--variant NAME] [--arm klarge] [--learning-rates R,R] [--betas B,B] [--epochs N] [--low-rank RANK]
+        [--likelihood-weight W]
     python -m general_models_vs_plms.preference_tuning --model small --check
 
 For the task of seed 0 of each split, under the arm `k256` unless another is named, the module writes one prediction
@@ -25,8 +26,10 @@ the ones with the highest Spearman on the held-out rows, and the queries are sco
 module reads no measured value of a query: a task file holds none.
 
 A variant changes one thing about the tuning and is named, so that its methods stand beside the plain ones:
-another grid, another arm of the tasks, or a low-rank update of the attention projections with every released
-weight frozen. With `--trace` each tuned arm also keeps its scores of the leading queries after every epoch.
+another grid, another arm of the tasks, a low-rank update of the attention projections with every released
+weight frozen, or a likelihood term beside the ranked loss: the negative log-likelihood of the preferred row of
+each pair of a batch (Pang et al. 2024, the loss ProGen3 was aligned with). With `--trace` each tuned arm also keeps
+its scores of the leading queries after every epoch.
 """
 
 from __future__ import annotations
@@ -112,7 +115,10 @@ class Recipe:
 
 @dataclass(frozen=True)
 class Settings:
-    """What the tuned arms share: the grid, the length of a run, and how many rows are held out for selection."""
+    """What the tuned arms share: the grid, the length of a run, and how many rows are held out for selection.
+
+    `likelihood_weight` scales the likelihood term added to the ranked loss, and zero leaves the ranked loss alone.
+    """
 
     learning_rates: tuple[float, ...] = (1e-5, 1e-4)
     betas: tuple[float, ...] = (0.1, 2.0)
@@ -120,6 +126,7 @@ class Settings:
     batch_size: int = 8
     held_out: int = 51
     tokens_per_batch: int = 40000
+    likelihood_weight: float = 0.0
 
     def recipes(self, loss: str) -> list[Recipe]:
         """The grid of a loss, lowest learning rate first: the ranked loss crosses it with beta."""
@@ -364,6 +371,21 @@ def ranked_preference_loss(ratios: Tensor, order: Tensor, beta: float) -> Tensor
     return -chosen.mean()  # ()
 
 
+def winner_likelihood_loss(scores: Tensor, order: Tensor) -> Tensor:
+    """The negative log-likelihood per residue of the preferred row of each pair of a batch, averaged over the pairs.
+
+    The row at rank k is preferred to every row ranked below it, so among b rows the first is the winner of b - 1
+    pairs and the last of none. Pang et al. (2024) add this term for the winner of each preference pair, divided by
+    its length, which a score already is. Zero for a batch of one row, which holds no pair.
+    """
+    # scores: (b,), each row's mean log-likelihood per residue; order: (b,), from the highest measured value to the lowest
+    count = len(order)
+    if count < 2:
+        return scores.sum() * 0.0  # ()
+    wins = torch.arange(count - 1, -1, -1, device=scores.device, dtype=scores.dtype)  # (b,)
+    return -(wins * scores[order]).sum() / wins.sum()  # ()
+
+
 def bradley_terry_loss(scores: Tensor, values: Tensor, scale: float) -> Tensor | None:
     """Binary cross-entropy that the row with the higher measured value has the higher score, over a batch's pairs.
 
@@ -436,6 +458,8 @@ def tune(
                     if recipe.loss == "dpo":
                         ranked = order_by_value(values[batch], tie_generator)  # (b,)
                         loss = ranked_preference_loss(scores - reference[batch], ranked, recipe.beta)
+                        if settings.likelihood_weight:
+                            loss = loss + settings.likelihood_weight * winner_likelihood_loss(scores, ranked)
                     else:
                         loss = bradley_terry_loss(scores, values[batch], scale)
                     if loss is None:
@@ -653,6 +677,8 @@ def main() -> None:
     parser.add_argument("--arm", default="k256", help="the arm of the tasks to tune on, such as klarge for the largest example sets")
     parser.add_argument("--low-rank", type=int, default=0,
                         help="freeze the model and tune a low-rank update of this rank on its attention projections")
+    parser.add_argument("--likelihood-weight", type=float, default=0.0,
+                        help="add this weight times the negative log-likelihood of each pair's preferred row to the ranked loss")
     parser.add_argument("--variant", default="",
                         help="a name for a run that changes one thing about the tuning: it goes into the method names and the folder")
     parser.add_argument("--inside", type=Path,
@@ -749,7 +775,8 @@ def main() -> None:
         trained = add_low_rank(scorer.model, args.low_rank)
         print(f"low-rank tuning at rank {args.low_rank}: {trained:,} trained weights", flush=True)
     grid = {"learning_rates": tuple(float(rate) for rate in args.learning_rates.split(",") if rate),
-            "betas": tuple(float(beta) for beta in args.betas.split(",") if beta), "epochs": args.epochs}
+            "betas": tuple(float(beta) for beta in args.betas.split(",") if beta), "epochs": args.epochs,
+            "likelihood_weight": args.likelihood_weight}
     settings = Settings(**{key: value for key, value in grid.items() if value})
     started = time.monotonic()
     for task in waiting:

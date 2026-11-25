@@ -31,9 +31,15 @@ PROBE_SPLITS = ("amylase/by_mutation", "hydro/three_to_many", "ired/two_to_many"
 # setting alone, run for 40 epochs on ProGen2-small and for 20 on ProGen2-base. `long20` and `long40` are that run
 # after a fixed number of epochs, with no checkpoint chosen.
 PREFERENCE_MODELS = ("progen2_small", "progen2_base", "progen2_small_slow", "progen2_small_lowrank", "progen2_small_rows",
-                     "progen2_small_long", "progen2_small_long20", "progen2_small_long40", "progen2_base_long", "progen2_base_long20")
+                     "progen2_small_long", "progen2_small_long20", "progen2_small_long40", "progen2_base_long", "progen2_base_long20",
+                     "progen2_small_nll", "progen2_small_nll20", "progen2_small_nllmid", "progen2_small_nllmid20",
+                     "progen2_small_nlllight", "progen2_small_nlllight20")
 # The arm of the tasks a variant of the tuning runs on, where it is not the 256 examples of the others.
 PREFERENCE_TASK_ARMS = {"progen2_small_rows": "klarge"}
+# The run a later run differs from in one thing, where that run is not the primary arm of the first tuned model: the
+# fixed recipe on a larger model, and the fixed recipe with a likelihood term at three weights.
+PREFERENCE_COUNTERPARTS = {"progen2_base_long20": "progen2_small_long20", "progen2_small_nll20": "progen2_small_long20",
+                           "progen2_small_nllmid20": "progen2_small_long20", "progen2_small_nlllight20": "progen2_small_long20"}
 PREFERENCE_ARMS = ("zero", "ridge", "dpo", "bt", "dpo_shuffled", "dpo_seed1", "dpo_seed2")
 # The effort levels a subagent can be given, lowest first, and how close to the best a lower level must score to be chosen.
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")

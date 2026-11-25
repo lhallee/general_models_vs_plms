@@ -31,7 +31,11 @@
 #   bash box.sh prefer night [MODEL] [UNTIL]  after any other chain has ended, three variants of the ranked-loss arm, each
 #                                          as a chain: a lower learning rate, a low-rank update of frozen weights, and
 #                                          the largest example sets; none starts at or after UNTIL (UTC, HHMM)
-#   bash box.sh bundle                     tables, manifests and probes as one archive, $STATE/bundle.tar.gz
+#   bash box.sh prefer likelihood [MODEL] [HOURS] [share]  after any other chain has ended, the fixed recipe with a
+#                                          likelihood term beside the ranked loss, one chain a weight (1, 0.01, 0.1),
+#                                          HOURS each; `share` enters beside another line's job inside the ceilings
+#   bash box.sh prefer stop                end this stage's waiting chains, never one whose container is running
+#   bash box.sh bundle                    tables, manifests and probes as one archive, $STATE/bundle.tar.gz
 #   bash box.sh logs [LINES]               the ends of the stage logs
 #   bash box.sh emit PATH                  a file under $STATE as base64 on standard output
 #   bash box.sh publish REPOSITORY [PATTERN ...]  everything but the Hub cache, or what the patterns match, to a private
@@ -247,7 +251,7 @@ case "$command" in
   prefer)
     # ProGen2 preference tuning on the k256 task of each split. The pilot is the full run's container and settings on
     # one split of equal-length variants and on Rhomax, whose sequences vary in length.
-    stage=${1:?box.sh prefer check|inside|states|pilot|main|chain|trace|short|night [MODEL] [HOURS or UNTIL] [long|fixed]}
+    stage=${1:?box.sh prefer check|inside|states|pilot|main|chain|trace|short|night|likelihood|stop [MODEL] [HOURS or UNTIL] [long|fixed|share]}
     model=${2:-small}
     hours=${3:-5}
     preset=${4:-}
@@ -295,6 +299,16 @@ case "$command" in
       # starts in that time (the stage then exits 75, and the wait begins again). A session that looks later finds
       # the GPU taken and waits its turn.
       local status idle watcher
+      if [ "$preset" = share ]; then
+        # Beside another line's job that is not a timed run, as the machine's rules allow inside its ceilings: enter
+        # once the GPU has under half its memory in use, so every job together stays under 90 percent, and hold
+        # nothing idle. The other job is never touched.
+        while [ "$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -1)" -ge 49000 ]; do sleep 30; done
+        echo "GUARD sharing the GPU, $(gpu_clients | wc -l) other client(s), entering $(date -u +%FT%TZ)"
+        status=0
+        "$@" || status=$?
+        return "$status"
+      fi
       while true; do
         idle=0
         while [ "$idle" -lt 90 ]; do
@@ -378,8 +392,38 @@ case "$command" in
         done
         echo "PREFER night $model DONE $(date -u +%FT%TZ)" >> "$log"
         ;;
+      stop)
+        # End this stage's waiting chains, and only waiting ones: with a container of this stage running nothing is
+        # touched, since stopping a busy container on this machine faults the shared MPS server.
+        if sudo docker ps --format '{{.Names}}' | grep -q '^gmp-prefer-'; then
+          echo "a gmp-prefer container is running; nothing was stopped"
+        elif pkill -f 'box[.]sh prefer (chain|trace|short|night|likelihood|states) '; then
+          echo "stopped the waiting chains at $(date -u +%FT%TZ)"
+        else
+          echo "no chain was waiting"
+        fi
+        exit 0
+        ;;
+      likelihood)
+        # A likelihood term beside the ranked loss, on the fixed recipe: the negative log-likelihood of the preferred
+        # row of each pair of a batch, at three weights, each as a chain into its own folder under $STATE/prefer. The
+        # weight of 1 runs first, then the lightest. It begins once no other chain of this stage runs. With `share` as
+        # the fourth argument it enters beside another line's job, where the guard would wait for an idle GPU.
+        log="$STATE/prefer_likelihood_$model.log"
+        echo "PREFER likelihood $model QUEUED $(date -u +%FT%TZ)" >> "$log"
+        while pgrep -f 'box\.sh prefer (short|chain|trace|night) ' > /dev/null; do sleep 30; done
+        for entry in "nll 1" "nlllight 0.01" "nllmid 0.1"; do
+          variant=${entry% *}
+          extra=(--variant "$variant" --arms zero,dpo --learning-rates 1e-5 --betas 2 --epochs 20 --trace 300 --fixed-epochs 20
+                 --likelihood-weight "${entry#* }")
+          echo "PREFER $variant $model START $(date -u +%FT%TZ)" >> "$log"
+          { pilot && tune --project && main; } >> "$log" 2>&1 || echo "PREFER $variant $model STOPPED with status $?" >> "$log"
+          echo "PREFER $variant $model ENDED $(date -u +%FT%TZ)" >> "$log"
+        done
+        echo "PREFER likelihood $model DONE $(date -u +%FT%TZ)" >> "$log"
+        ;;
       *)
-        echo "usage: box.sh prefer check|inside|states|pilot|main|chain|trace|short|night [MODEL] [HOURS or UNTIL] [long|fixed]" >&2
+        echo "usage: box.sh prefer check|inside|states|pilot|main|chain|trace|short|night|likelihood|stop [MODEL] [HOURS or UNTIL] [long|fixed|share]" >&2
         exit 2
         ;;
     esac

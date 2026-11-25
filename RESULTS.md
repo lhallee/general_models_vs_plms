@@ -389,6 +389,56 @@ chose this setting at an earlier epoch (0.311 against 0.363 after 20 epochs). Ch
 one setting, costs nothing. On FGFR2 the 20-epoch model scores 0.407 on queries 101 to 300 and ties the best ridge
 there, and 0.342 on the first 100, -0.219 (-0.367 to -0.079) from Claude Mythos 5.2.
 
+### A likelihood term beside the ranked loss
+
+The ranked preference loss reads only how the rows of a batch differ from one another, so it is as low when the
+likelihood of every row falls as when it rises. Iterative Reasoning Preference Optimization (Pang and colleagues,
+NeurIPS 2024, [arXiv 2404.19733](https://arxiv.org/abs/2404.19733)) adds to a preference loss the negative
+log-likelihood of the preferred sequence of each pair, and reports that without it the likelihood of the preferred
+sequences falls during tuning. Here a batch of 8 rows is ranked, so each row is the preferred one of the pairs it
+forms with the rows measured below it, and the term is the negative mean log-likelihood per residue of each pair's
+preferred row, averaged over the 28 pairs of the batch. It was added to the fixed recipe of the section above
+(ProGen2-small, the learning rate 0.00001, the weight 2, 20 epochs, nothing chosen) at three weights: 1, which is the
+weight of that method and was named the primary run before any was scored, and 0.1 and 0.01. Each run differs from
+the fixed recipe in the term alone, with the same rows, batches, and seed.
+
+| ProGen2-small, fixed recipe, 16 FLIP2 splits | Queries 101 to 300 | Minus the recipe without the term | Minus the best ridge there | All 300 | Minus the recipe without the term | First 100 | Mean log-likelihood per residue of the queries after 20 epochs |
+|---|---|---|---|---|---|---|---|
+| The released model, no examples | 0.226 | | | 0.229 | | 0.239 | -2.12 |
+| No term | 0.324 (0.290 to 0.354) | | -0.026 (-0.063 to +0.013) | 0.330 | | 0.339 | -7.71 |
+| Weight 0.01 | 0.344 (0.310 to 0.374) | +0.020 (+0.001 to +0.039) | -0.006 (-0.041 to +0.028) | 0.346 | +0.016 (+0.002 to +0.031) | 0.352 | -3.76 |
+| Weight 0.1 | 0.348 (0.314 to 0.379) | +0.024 (-0.002 to +0.051) | -0.002 (-0.036 to +0.032) | 0.357 | +0.026 (+0.006 to +0.048) | 0.378 | -1.46 |
+| Weight 1, the primary run | 0.295 (0.261 to 0.327) | -0.030 (-0.063 to +0.005) | -0.056 (-0.090 to -0.020) | 0.302 | -0.028 (-0.054 to -0.003) | 0.321 | -1.03 |
+
+Without the term the tuned model ranks the variants of a protein that it no longer models. The released model gives
+the queries a mean log-likelihood of -2.12 per residue. Under the fixed recipe that mean is -2.44 after one epoch,
+-4.26 after 5, and -7.71 after 20, and it is below the released model's on all 16 splits after 5, 10, 15, and 20
+epochs. The term slows the fall at the weight 0.01 and stops it at 0.1 and at 1, where the mean ends above the
+released model's, since the term also fits the protein that the variants of a split share.
+
+On the ranking the primary run shows no gain. At the weight 1 the difference from the recipe without the term has an
+interval that includes zero on queries 101 to 300 and lies below zero on all 300, and the model falls behind the best
+ridge. At 0.1 and 0.01 the differences are positive, about 0.02: on queries 101 to 300 one interval clears zero by
+0.001 and the other includes it, and on all 300 both lie above zero. Three weights were read under one batch order and
+neither lighter weight was the primary run, so that gain is a lead and not a finding. The lighter weights are ahead of
+the recipe without the term on 8 and on 9 of the 16 splits on queries 101 to 300, and the weight 1 on 5.
+
+Against the two references nothing changes. With the term at 0.1 the model is level with the best ridge on queries 101
+to 300 and on the first 100 (+0.011, -0.044 to +0.061), and level with Claude Mythos 5.2 on the first 100, 0.378
+against 0.380 (-0.002, -0.045 to +0.038). It is above neither.
+
+Split by split the term moves scores in both directions. At 0.1 on queries 101 to 300 the largest gains are on
+`amylase/far_to_close` (0.152 to 0.395), `amylase/close_to_far` (0.250 to 0.460), and `pdz3/single_to_double` (0.395
+to 0.563), and the largest losses on `hydro/to_P01053` (0.353 to 0.183) and `rhomax/by_wild_type` (0.392 to 0.270). On
+the 51 held-out rows the mean Spearman after 20 epochs is 0.521 without the term, 0.538 at 0.01, 0.573 at 0.1, and
+0.488 at 1. On the two FGFR2 splits the weights 0.1 and 1 score 0.471 and 0.467 on the first 100 queries, against
+0.342 without the term, and 0.328 and 0.321 on queries 101 to 300, against 0.407. On all 300 FGFR2 queries the four
+runs are within 0.022 of each other.
+
+The term as that method defines it is for pairs, and weighting it over the pairs of a ranked batch is this
+repository's reading of it. Each run has one batch order and no control on shuffled values, and only ProGen2-small
+was run.
+
 ### Averaged with another ranking
 
 The mean rank of each query under the reported tuned model and one other method, on the first 100 queries. Nothing

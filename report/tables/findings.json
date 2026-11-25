@@ -124,7 +124,13 @@
   "progen2_small_long20",
   "progen2_small_long40",
   "progen2_base_long",
-  "progen2_base_long20"
+  "progen2_base_long20",
+  "progen2_small_nll",
+  "progen2_small_nll20",
+  "progen2_small_nllmid",
+  "progen2_small_nllmid20",
+  "progen2_small_nlllight",
+  "progen2_small_nlllight20"
  ],
  "best_ridge_at_k256": {
   "flip2": "ridge_onehot_plus_esmc_600m",

@@ -69,7 +69,10 @@ VARIANT_LABELS = {"progen2_small_slow": "Learning rate 0.000001, a tenth of the 
                   "progen2_small_rows": "Every labeled row of the split, up to 2,048",
                   "progen2_small_long": "One setting, up to 40 epochs, checkpoint chosen",
                   "progen2_small_long20": "One setting, 20 epochs, nothing chosen",
-                  "progen2_small_long40": "One setting, 40 epochs, nothing chosen"}
+                  "progen2_small_long40": "One setting, 40 epochs, nothing chosen",
+                  "progen2_small_nll20": "One setting, 20 epochs, likelihood term of weight 1",
+                  "progen2_small_nllmid20": "One setting, 20 epochs, likelihood term of weight 0.1",
+                  "progen2_small_nlllight20": "One setting, 20 epochs, likelihood term of weight 0.01"}
 DATASET_LABELS = {"amylase": "Amylase", "ired": "IRED", "nucb": "NucB", "trpb": "TrpB", "hydro": "Hydro", "rhomax": "RhoMax",
                   "pdz3": "PDZ3", "fgfr2": "FGFR2"}
 ARM_LABELS = {"k256_flipped": "256 examples, values reversed", "k256_shuffled": "256 examples, values shuffled",

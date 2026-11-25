@@ -171,6 +171,35 @@ def test_ranked_loss_is_the_plackett_luce_likelihood_of_the_measured_order() -> 
     assert ratios.grad[1] < 0 < ratios.grad[0]
 
 
+def test_likelihood_term_is_the_negative_score_of_each_pair_winner() -> None:
+    scores = torch.tensor([-2.0, -3.0, -1.5], requires_grad=True)
+    order = torch.tensor([1, 2, 0])
+
+    loss = preference_tuning.winner_likelihood_loss(scores, order)
+    loss.backward()
+
+    # Of the three pairs, the first row of the order wins two, the second wins one, and the last wins none.
+    assert float(loss.detach()) == pytest.approx((2 * 3.0 + 1 * 1.5) / 3, abs=1e-6)
+    assert scores.grad.tolist() == pytest.approx([0.0, -2 / 3, -1 / 3])
+    # A batch of one row holds no pair.
+    assert float(preference_tuning.winner_likelihood_loss(scores[:1], torch.tensor([0])).detach()) == 0.0
+
+
+def test_a_likelihood_term_raises_the_scores_the_ranked_loss_leaves_free(tmp_path: Path) -> None:
+    task, frame = planted_task(tmp_path)
+    layout = load_layout(plan.split_infos(("amylase/by_mutation",))[0], frame)
+    anchored = replace(FAST, likelihood_weight=1.0)
+
+    _, plain = preference_tuning.task_methods(scorer_of(BigramModel()), "toy", task, layout, ("dpo",), FAST, traced=100)
+    _, record = preference_tuning.task_methods(scorer_of(BigramModel()), "toy", task, layout, ("dpo",), anchored, traced=100)
+
+    assert (plain["settings"]["likelihood_weight"], record["settings"]["likelihood_weight"]) == (0.0, 1.0)
+    last = [np.mean(found["arms"]["dpo"]["curves"][0]["query_scores"][-1]) for found in (plain, record)]
+    # The ranked loss reads only differences between rows; the term also asks for a higher likelihood of the preferred ones.
+    assert last[1] > last[0]
+    assert record["arms"]["dpo"]["curves"][0]["train_loss"] != plain["arms"]["dpo"]["curves"][0]["train_loss"]
+
+
 def test_equal_values_are_ordered_at_random() -> None:
     values = torch.tensor([2.0, 1.0, 2.0, 2.0])
     generator = np.random.default_rng(0)
